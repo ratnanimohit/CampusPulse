@@ -48,6 +48,16 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
+        if (!email.endsWith('@gla.ac.in')) {
+          const message = 'Only @gla.ac.in emails are allowed for sign up.';
+          setError(message);
+          toast({
+            variant: 'destructive',
+            title: 'Invalid Email',
+            description: message,
+          });
+          return;
+        }
         await createUserWithEmailAndPassword(auth, email, password);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -100,7 +110,7 @@ export default function LoginPage() {
             </CardTitle>
             <CardDescription>
               {isSignUp
-                ? 'Enter your email and password to get started.'
+                ? 'Use your @gla.ac.in email to get started.'
                 : 'Sign in to access your dashboard.'}
             </CardDescription>
           </CardHeader>
@@ -124,6 +134,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
             {error && (
