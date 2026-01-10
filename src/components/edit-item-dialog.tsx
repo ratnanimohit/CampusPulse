@@ -68,12 +68,7 @@ export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: Ed
   }, [item, form])
 
   const onSubmit = (data: EditedItem) => {
-    if (!firestore) return;
-    const itemDocRef = doc(firestore, 'itemListings', data.id);
-    const updateData = { name: data.itemName, karma: data.karma };
-    
-    setDocumentNonBlocking(itemDocRef, updateData, { merge: true });
-
+    onItemUpdated(data);
     toast({
       title: 'Item Updated!',
       description: `Your item has been successfully updated.`,

@@ -9,7 +9,7 @@ import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, setDoc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Item = {
     id: string;
@@ -47,12 +47,12 @@ export default function LockerPage() {
     const handleItemUpdated = (updatedItem: EditedItem) => {
         if (!firestore) return;
         const itemDocRef = doc(firestore, 'itemListings', updatedItem.id);
-        // Correctly use a non-blocking update.
-        // The previous `updateDocumentNonBlocking` was removed.
-        setDoc(itemDocRef, {
+        
+        setDocumentNonBlocking(itemDocRef, {
             name: updatedItem.itemName,
             karma: updatedItem.karma,
         }, { merge: true });
+        
         setEditingItem(null);
     };
     

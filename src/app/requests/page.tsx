@@ -70,7 +70,8 @@ export default function RequestsPage() {
       return;
     }
 
-    addDocumentNonBlocking(collection(firestore, 'itemRequests'), {
+    const itemRequestsCol = collection(firestore, 'itemRequests');
+    addDocumentNonBlocking(itemRequestsCol, {
       ...data,
       requesterId: user.uid,
     });
