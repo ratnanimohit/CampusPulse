@@ -113,8 +113,10 @@ export default function Dashboard() {
           requestedItemName: request.itemName,
           availableItems: availableItems.map(item => ({ id: item.id, name: item.name })),
       });
+      
+      const matchedItem = availableItems.find(item => item.id === matchResult.matchedItemId);
 
-      if (!matchResult.matchedItemId) {
+      if (!matchedItem) {
          toast({
           variant: 'destructive',
           title: 'No suitable item found',
@@ -123,20 +125,6 @@ export default function Dashboard() {
         setIsFulfilling(null);
         return;
       }
-
-      const matchedItem = availableItems.find(item => item.id === matchResult.matchedItemId);
-
-      if (!matchedItem) {
-          // This should rarely happen if the AI is working correctly
-           toast({
-            variant: 'destructive',
-            title: 'Matching Error',
-            description: 'Could not find the matched item data after AI selection.',
-          });
-          setIsFulfilling(null);
-          return;
-      }
-
 
       // 3. Create a new transaction
       const transactionData = {

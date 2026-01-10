@@ -69,6 +69,19 @@ const semanticItemMatchFlow = ai.defineFlow(
         }
     }
     const {output} = await prompt(input);
-    return output!;
+
+    if (!output) {
+      return {
+        matchedItemId: null,
+        reasoning: "The AI model could not determine a match.",
+      };
+    }
+    
+    // Ensure that if the model returns an empty string, we treat it as null
+    if (output.matchedItemId === "") {
+        output.matchedItemId = null;
+    }
+    
+    return output;
   }
 );
