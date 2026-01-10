@@ -1,3 +1,5 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -6,6 +8,7 @@ import { PlusCircle, ArrowUpRight } from "lucide-react";
 import Link from 'next/link';
 import Image from 'next/image';
 import { placeholderImages } from '@/lib/placeholder-images.json';
+import { useUser } from "@/firebase";
 
 const transactions = [
   { id: 1, item: "Electric Iron", user: "Ravi Kumar", type: "Lent", status: "Returned", karma: "+5" },
@@ -17,11 +20,13 @@ const transactions = [
 const availableItems = placeholderImages.slice(0, 4);
 
 export default function Dashboard() {
+  const user = useUser();
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Welcome back, Student!</h1>
+          <h1 className="text-3xl font-bold font-headline">Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}!</h1>
           <p className="text-muted-foreground">Here's what's happening on campus today.</p>
         </div>
         <div className="flex gap-2">

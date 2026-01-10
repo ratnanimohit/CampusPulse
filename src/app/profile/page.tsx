@@ -1,9 +1,18 @@
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@/firebase";
 import { Edit } from "lucide-react";
 
 export default function ProfilePage() {
+    const user = useUser();
+
+    if (!user) {
+        return <div>Loading...</div>
+    }
+
     return (
         <div className="flex flex-col gap-8">
             <Card>
@@ -11,13 +20,13 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                              <Avatar className="h-20 w-20 border-2 border-primary">
-                                <AvatarImage src="https://picsum.photos/seed/user-avatar/80/80" alt="@student" data-ai-hint="person avatar"/>
-                                <AvatarFallback>SC</AvatarFallback>
+                                <AvatarImage src={user.photoURL || ''} alt={user.displayName || ''} data-ai-hint="person avatar"/>
+                                <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                             <div>
-                                <CardTitle className="text-2xl font-headline">Student Name</CardTitle>
-                                <CardDescription>student@gla.ac.in</CardDescription>
-                                <CardDescription>Joined: January 2023</CardDescription>
+                                <CardTitle className="text-2xl font-headline">{user.displayName}</CardTitle>
+                                <CardDescription>{user.email}</CardDescription>
+                                <CardDescription>Joined: {user.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString('en-US', { month: 'long', year: 'numeric'}) : 'N/A'}</CardDescription>
                             </div>
                         </div>
                         <Button variant="outline" size="icon">
