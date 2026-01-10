@@ -70,12 +70,10 @@ export default function RequestsPage() {
       return;
     }
 
-    const newRequest = {
+    addDocumentNonBlocking(collection(firestore, 'itemRequests'), {
       ...data,
       requesterId: user.uid,
-    };
-
-    addDocumentNonBlocking(collection(firestore, 'itemRequests'), newRequest);
+    });
 
     toast({
       title: 'Request Submitted!',
