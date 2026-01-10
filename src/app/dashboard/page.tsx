@@ -32,8 +32,8 @@ import {
   limit,
   addDoc,
   serverTimestamp,
+  updateDoc,
 } from 'firebase/firestore';
-import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Item } from '@/app/locker/page';
 import { useRouter } from 'next/navigation';
 
@@ -54,8 +54,8 @@ export default function Dashboard() {
   const router = useRouter();
 
   const requestsQuery = useMemoFirebase(
-    () => firestore && collection(firestore, 'itemRequests'),
-    [firestore]
+    () => firestore && query(collection(firestore, 'itemRequests'), where('requesterId', '!=', user?.uid || '')),
+    [firestore, user]
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
   const [isClient, setIsClient] = useState(false);
@@ -124,7 +124,12 @@ export default function Dashboard() {
       const transactionsCol = collection(firestore, 'transactions');
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
 
-      // 3. Delete the original item request
+      // 3. Mark the item as unavailable
+      await updateDoc(doc(firestore, 'itemListings', item.id), {
+        available: false,
+      });
+
+      // 4. Delete the original item request
       const requestDocRef = doc(firestore, 'itemRequests', request.id);
       await deleteDoc(requestDocRef);
 
@@ -133,7 +138,7 @@ export default function Dashboard() {
         description: 'A transaction has been created. Show the QR code to the borrower.',
       });
 
-      // 4. Navigate to the transaction page
+      // 5. Navigate to the transaction page
       router.push(`/transaction/${transactionDocRef.id}`);
 
     } catch (error) {
@@ -149,6 +154,8 @@ export default function Dashboard() {
   if (!isClient) {
     return null; // Or a loading spinner
   }
+
+  const communityRequests = requests?.filter(req => req.requesterId !== user?.uid);
 
   return (
     <div className="flex flex-col gap-8">
@@ -344,7 +351,7 @@ export default function Dashboard() {
           <CardContent>
             {isLoadingRequests ? (
               <p>Loading requests...</p>
-            ) : requests && requests.length > 0 ? (
+            ) : communityRequests && communityRequests.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -354,7 +361,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.slice(0, 3).map(req => (
+                  {communityRequests.slice(0, 3).map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">
                         {req.itemName}
@@ -401,5 +408,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
