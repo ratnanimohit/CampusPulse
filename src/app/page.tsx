@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,12 +15,30 @@ const availableItems: any[] = [];
 
 export default function Dashboard() {
   const user = useUser();
+  const [userName, setUserName] = useState('');
+
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('userSettings');
+    const defaultName = user?.displayName?.split(' ')[0] || 'Student';
+
+    if (savedSettings) {
+      try {
+        const { name } = JSON.parse(savedSettings);
+        setUserName(name || defaultName);
+      } catch (e) {
+        setUserName(defaultName);
+      }
+    } else {
+      setUserName(defaultName);
+    }
+  }, [user]);
+
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Welcome back, {user?.displayName?.split(' ')[0] || 'Student'}!</h1>
+          <h1 className="text-3xl font-bold font-headline">Welcome back, {userName}!</h1>
           <p className="text-muted-foreground">Here's what's happening on campus today.</p>
         </div>
         <div className="flex gap-2">
