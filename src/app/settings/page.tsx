@@ -1,16 +1,41 @@
+'use client';
+
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useUser } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
+    const user = useUser();
+    const { toast } = useToast();
+    
+    const [name, setName] = useState(user?.displayName || '');
+    const [emailNotifications, setEmailNotifications] = useState(true);
+    const [pushNotifications, setPushNotifications] = useState(false);
+
+    const handleSaveChanges = () => {
+        // In a real app, you'd save these to a backend.
+        // For now, we just show a toast.
+        toast({
+            title: "Settings Saved",
+            description: "Your changes have been saved successfully.",
+        });
+    };
+
+
     return (
         <div className="flex flex-col gap-8">
-            <div>
-                <h1 className="text-3xl font-bold font-headline">Settings</h1>
-                <p className="text-muted-foreground">Manage your account and notification settings.</p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline">Settings</h1>
+                    <p className="text-muted-foreground">Manage your account and notification settings.</p>
+                </div>
+                <Button onClick={handleSaveChanges}>Save Changes</Button>
             </div>
             
             <Card>
@@ -21,11 +46,11 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" defaultValue="Student Name" />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" defaultValue="student@gla.ac.in" disabled />
+                        <Input id="email" value={user?.email || ''} disabled />
                     </div>
                 </CardContent>
             </Card>
@@ -41,7 +66,7 @@ export default function SettingsPage() {
                             <Label htmlFor="email-notifications">Email Notifications</Label>
                             <p className="text-sm text-muted-foreground">Receive emails about new requests and messages.</p>
                         </div>
-                        <Switch id="email-notifications" defaultChecked />
+                        <Switch id="email-notifications" checked={emailNotifications} onCheckedChange={setEmailNotifications} />
                     </div>
                     <Separator/>
                      <div className="flex items-center justify-between">
@@ -49,7 +74,7 @@ export default function SettingsPage() {
                             <Label htmlFor="push-notifications">Push Notifications</Label>
                             <p className="text-sm text-muted-foreground">Get push notifications on your mobile device.</p>
                         </div>
-                        <Switch id="push-notifications" />
+                        <Switch id="push-notifications" checked={pushNotifications} onCheckedChange={setPushNotifications} />
                     </div>
                 </CardContent>
             </Card>
