@@ -32,8 +32,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -71,10 +71,16 @@ export default function RequestsPage() {
     }
 
     const itemRequestsCol = collection(firestore, 'itemRequests');
-    addDocumentNonBlocking(itemRequestsCol, {
+    // Create a new document reference with a unique ID
+    const newRequestRef = doc(itemRequestsCol);
+
+    // Use setDocumentNonBlocking to create the document with the specific ID
+    setDocumentNonBlocking(newRequestRef, {
       ...data,
+      id: newRequestRef.id, // Add the generated ID to the document data
       requesterId: user.uid,
     });
+
 
     toast({
       title: 'Request Submitted!',

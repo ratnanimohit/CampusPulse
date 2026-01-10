@@ -146,6 +146,10 @@
       "type": "object",
       "description": "Represents a user's request for an item.",
       "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the item request."
+        },
         "requesterId": {
           "type": "string",
           "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ItemRequest)"
@@ -169,6 +173,7 @@
         }
       },
       "required": [
+        "id",
         "requesterId",
         "itemName",
         "reason",
