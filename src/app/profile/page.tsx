@@ -7,9 +7,9 @@ import { useUser } from "@/firebase";
 import { Edit } from "lucide-react";
 
 export default function ProfilePage() {
-    const user = useUser();
+    const { user, isUserLoading } = useUser();
 
-    if (user === undefined) {
+    if (isUserLoading || user === undefined) {
         return <div>Loading...</div>
     }
 
