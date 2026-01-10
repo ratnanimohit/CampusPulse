@@ -26,7 +26,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Item } from '@/app/locker/page';
 import { useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const editItemSchema = z.object({
@@ -70,7 +70,9 @@ export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: Ed
   const onSubmit = (data: EditedItem) => {
     if (!firestore) return;
     const itemDocRef = doc(firestore, 'itemListings', data.id);
-    updateDocumentNonBlocking(itemDocRef, { name: data.itemName, karma: data.karma });
+    const updateData = { name: data.itemName, karma: data.karma };
+    
+    setDocumentNonBlocking(itemDocRef, updateData, { merge: true });
 
     toast({
       title: 'Item Updated!',
