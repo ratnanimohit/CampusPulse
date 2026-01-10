@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
@@ -8,8 +8,8 @@ import Image from 'next/image';
 import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, where, doc, setDoc } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Item = {
     id: string;
@@ -47,10 +47,12 @@ export default function LockerPage() {
     const handleItemUpdated = (updatedItem: EditedItem) => {
         if (!firestore) return;
         const itemDocRef = doc(firestore, 'itemListings', updatedItem.id);
-        updateDocumentNonBlocking(itemDocRef, {
+        // Correctly use a non-blocking update.
+        // The previous `updateDocumentNonBlocking` was removed.
+        setDoc(itemDocRef, {
             name: updatedItem.itemName,
             karma: updatedItem.karma,
-        });
+        }, { merge: true });
         setEditingItem(null);
     };
     
