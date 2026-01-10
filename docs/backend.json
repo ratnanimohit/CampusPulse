@@ -123,13 +123,9 @@
           "type": "number",
           "description": "Rating given by the borrower to the lender (0-5)."
         },
-        "qrCodeStart": {
+        "handshakeCode": {
           "type": "string",
-          "description": "QR Code generated when the transaction has started."
-        },
-        "qrCodeEnd": {
-          "type": "string",
-          "description": "QR Code generated when the transaction has finished."
+          "description": "A 6-digit code used to verify the start of the rental."
         }
       },
       "required": [

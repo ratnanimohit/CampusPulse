@@ -85,43 +85,44 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
 
     try {
-      // For simplicity in this fix, we assume a match and create a transaction.
-      // A more robust implementation would check if the lender has a suitable item.
-      // We will create a placeholder item object for the transaction.
+      // For simplicity, we assume the lender has the item.
+      // A robust implementation would first verify item availability.
       const matchedItem = {
-        id: "placeholder-id", // In a real scenario, this would be the matched item's ID
+        id: "placeholder-id",
         name: request.itemName,
         imageUrl: 'https://picsum.photos/seed/placeholder/320/180',
-        karma: 10, // Default karma
+        karma: 10,
       };
 
-      // 1. Create a new transaction
+      // 1. Generate a 6-digit handshake code
+      const handshakeCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      // 2. Create a new transaction with the handshake code
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
-        itemId: matchedItem.id, // Using placeholder
+        itemId: matchedItem.id,
         itemName: matchedItem.name,
         itemImageUrl: matchedItem.imageUrl,
         karma: matchedItem.karma,
         startTime: serverTimestamp(),
-        status: 'pending-start', // Lender has fulfilled, waiting for borrower to scan
-        qrCodeStart: `${user.uid}-${request.requesterId}-${matchedItem.id}-${Date.now()}` // Unique QR content
+        status: 'pending-handshake', // New status for code verification
+        handshakeCode: handshakeCode,
       };
 
       const transactionsCol = collection(firestore, 'transactions');
-      // Using addDoc and awaiting its result to get the ID for navigation
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
 
-      // 2. Delete the original item request to mark it as 'matched'
+      // 3. Delete the original item request
       const requestDocRef = doc(firestore, 'itemRequests', request.id);
       deleteDocumentNonBlocking(requestDocRef);
 
       toast({
         title: 'Request Fulfilled!',
-        description: `Transaction created for "${matchedItem.name}". Show the QR code to the borrower.`,
+        description: `A transaction has been created for "${matchedItem.name}".`,
       });
 
-      // 3. Navigate to the transaction page to display the QR code
+      // 4. Navigate to the transaction page to display the code
       router.push(`/transaction/${transactionDocRef.id}`);
 
     } catch (error) {
