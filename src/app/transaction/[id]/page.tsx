@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
-import { doc, serverTimestamp, updateDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -51,8 +51,32 @@ export default function TransactionPage() {
   const [enteredCode, setEnteredCode] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  const isLender = user?.uid === transaction?.lenderId;
-  const isBorrower = user?.uid === transaction?.borrowerId;
+  if (isLoading) {
+    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+  }
+
+  if (!transaction) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center">
+            <Card className="w-full max-w-md">
+                <CardHeader>
+                    <CardTitle>Transaction Not Found</CardTitle>
+                    <CardDescription>This transaction may have been cancelled or does not exist.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button asChild>
+                        <Link href="/dashboard">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
+                        </Link>
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
+
+  const isLender = user?.uid === transaction.lenderId;
+  const isBorrower = user?.uid === transaction.borrowerId;
 
   const handleVerifyCode = async () => {
     if (!transaction || !transactionDocRef || !isBorrower) return;
@@ -144,49 +168,111 @@ export default function TransactionPage() {
     setIsVerifying(false);
   }
 
+  let statusDescription;
+  let content;
 
-  if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
-  }
-
-  if (!transaction) {
-    return (
-        <div className="flex flex-col gap-4 items-center text-center">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Transaction Not Found</CardTitle>
-                    <CardDescription>This transaction may have been cancelled or does not exist.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button asChild>
-                        <Link href="/dashboard">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
+  if (transaction.status === 'pending-handshake') {
+    statusDescription = isLender ? 'Share the 6-digit code below with the borrower to start the rental.' : 'Enter the 6-digit code from the lender to start the rental.';
+    if (isLender) {
+      content = (
+        <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+          <p className="text-sm text-muted-foreground">Verification Code</p>
+          <p className="text-4xl font-bold tracking-widest text-primary">
+            {transaction.handshakeCode}
+          </p>
         </div>
-    );
-  }
-
-  const getStatusDescription = () => {
-    switch (transaction.status) {
-      case 'pending-handshake':
-        return isLender
-          ? 'Share the 6-digit code with the borrower to start the rental.'
-          : 'Enter the 6-digit code from the lender to start the rental.';
-      case 'active':
-        return `Rental in progress for ${transaction.itemName}.`;
-      case 'pending-end':
-        return isBorrower
-          ? 'Share the new 6-digit code with the lender to complete the return.'
-          : 'Enter the code from the borrower to confirm the return.';
-      case 'completed':
-        return 'This transaction has been completed.';
-      default:
-        return 'Transaction status is unknown.';
+      );
+    } else if (isBorrower) {
+      content = (
+        <div className="w-full space-y-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="text-muted-foreground" />
+            <Input
+              type="text"
+              maxLength={6}
+              placeholder="Enter 6-digit code"
+              value={enteredCode}
+              onChange={e => setEnteredCode(e.target.value)}
+              className="text-center text-lg tracking-widest"
+              disabled={isVerifying}
+            />
+          </div>
+          <Button
+            onClick={handleVerifyCode}
+            className="w-full"
+            disabled={isVerifying || enteredCode.length !== 6}
+          >
+            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Start Rental
+          </Button>
+        </div>
+      );
     }
-  };
+  } else if (transaction.status === 'active') {
+    statusDescription = `Rental in progress for ${transaction.itemName}.`;
+    if (isBorrower) {
+      content = (
+        <Button onClick={handleEndRental} variant="outline" className="w-full">
+          End Rental & Generate Return Code
+        </Button>
+      );
+    } else if (isLender) {
+      content = (
+        <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>
+      );
+    }
+  } else if (transaction.status === 'pending-end') {
+    statusDescription = isBorrower ? 'Share the new 6-digit code with the lender to complete the return.' : 'Enter the code from the borrower to confirm the return.';
+    if (isBorrower) {
+      content = (
+        <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+          <p className="text-sm text-muted-foreground">Return Code</p>
+          <p className="text-4xl font-bold tracking-widest text-primary">
+            {transaction.handshakeCode}
+          </p>
+        </div>
+      );
+    } else if (isLender) {
+      content = (
+        <div className="w-full space-y-4">
+          <div className="flex items-center gap-2">
+            <KeyRound className="text-muted-foreground" />
+            <Input
+              type="text"
+              maxLength={6}
+              placeholder="Enter 6-digit code"
+              value={enteredCode}
+              onChange={e => setEnteredCode(e.target.value)}
+              className="text-center text-lg tracking-widest"
+              disabled={isVerifying}
+            />
+          </div>
+          <Button
+            onClick={handleConfirmReturn}
+            className="w-full"
+            disabled={isVerifying || enteredCode.length !== 6}
+          >
+            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Confirm Return
+          </Button>
+        </div>
+      );
+    }
+  } else if (transaction.status === 'completed') {
+    statusDescription = 'This transaction has been completed.';
+    content = (
+      <div className="text-center space-y-4">
+        <p className="text-muted-foreground text-center">This transaction is complete.</p>
+        <Button asChild variant="outline" className="mt-4">
+          <Link href="/dashboard">Back to Dashboard</Link>
+        </Button>
+      </div>
+    );
+  } else {
+    statusDescription = 'Transaction status is unknown.';
+    content = <p>An unknown error occurred.</p>;
+  }
+  
 
   return (
     <div className="flex flex-col gap-4 items-center">
@@ -202,7 +288,7 @@ export default function TransactionPage() {
           <CardTitle className="font-headline text-2xl">
             Transaction Details
           </CardTitle>
-          <CardDescription>{getStatusDescription()}</CardDescription>
+          <CardDescription>{statusDescription}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-6">
           <div className="relative w-48 h-48">
@@ -216,102 +302,9 @@ export default function TransactionPage() {
             />
           </div>
           <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
-
           <div className="w-full space-y-4">
-             {/* LENDER'S VIEW */}
-            {isLender && (
-                <>
-                    {transaction.status === 'pending-handshake' && (
-                         <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-                            <p className="text-sm text-muted-foreground">Verification Code</p>
-                            <p className="text-4xl font-bold tracking-widest text-primary">
-                            {transaction.handshakeCode}
-                            </p>
-                        </div>
-                    )}
-                    {transaction.status === 'pending-end' && (
-                        <div className="w-full space-y-4">
-                            <div className="flex items-center gap-2">
-                            <KeyRound className="text-muted-foreground" />
-                            <Input
-                                type="text"
-                                maxLength={6}
-                                placeholder="Enter 6-digit code"
-                                value={enteredCode}
-                                onChange={e => setEnteredCode(e.target.value)}
-                                className="text-center text-lg tracking-widest"
-                                disabled={isVerifying}
-                            />
-                            </div>
-                            <Button 
-                            onClick={handleConfirmReturn} 
-                            className="w-full" 
-                            disabled={isVerifying || enteredCode.length !== 6}
-                            >
-                            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Confirm Return
-                            </Button>
-                        </div>
-                    )}
-                    {transaction.status === 'active' && (
-                        <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>
-                    )}
-                </>
-            )}
-
-            {/* BORROWER'S VIEW */}
-            {isBorrower && (
-                 <>
-                    {transaction.status === 'pending-handshake' && (
-                        <div className="w-full space-y-4">
-                            <div className="flex items-center gap-2">
-                                <KeyRound className="text-muted-foreground" />
-                                <Input
-                                    type="text"
-                                    maxLength={6}
-                                    placeholder="Enter 6-digit code"
-                                    value={enteredCode}
-                                    onChange={e => setEnteredCode(e.target.value)}
-                                    className="text-center text-lg tracking-widest"
-                                    disabled={isVerifying}
-                                />
-                            </div>
-                            <Button 
-                                onClick={handleVerifyCode} 
-                                className="w-full" 
-                                disabled={isVerifying || enteredCode.length !== 6}
-                            >
-                                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Start Rental
-                            </Button>
-                        </div>
-                    )}
-                    {transaction.status === 'active' && (
-                         <Button onClick={handleEndRental} variant="outline" className="w-full">
-                            End Rental & Generate Return Code
-                        </Button>
-                    )}
-                    {transaction.status === 'pending-end' && (
-                         <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-                            <p className="text-sm text-muted-foreground">Return Code</p>
-                            <p className="text-4xl font-bold tracking-widest text-primary">
-                            {transaction.handshakeCode}
-                            </p>
-                        </div>
-                    )}
-                 </>
-            )}
-            
-            {transaction.status === 'completed' && (
-                <div className="text-center space-y-4">
-                     <p className="text-muted-foreground text-center">This transaction is complete.</p>
-                     <Button asChild variant="outline" className="mt-4">
-                        <Link href="/dashboard">Back to Dashboard</Link>
-                    </Button>
-                </div>
-            )}
+             {content}
           </div>
-
         </CardContent>
       </Card>
     </div>
