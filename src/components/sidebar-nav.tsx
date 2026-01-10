@@ -9,7 +9,8 @@ import {
   Users,
   Settings,
   History,
-  Package2
+  Package2,
+  FileQuestion
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -25,6 +26,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/', icon: Home, label: 'Dashboard' },
     { href: '/locker', icon: Package, label: 'My Locker' },
     { href: '/requests', icon: PlusCircle, label: 'New Request' },
+    { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
     { href: '/history', icon: History, label: 'History' },
     { href: '/profile', icon: Users, label: 'Profile' },
   ];
@@ -33,7 +35,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     return pathname === href;
   }
 
-  const NavLink = ({ href, icon: Icon, label, badge }: typeof navLinks[0]) => (
+  const NavLink = ({ href, icon: Icon, label, badge }: typeof navLinks[0] & { badge?: string }) => (
     <Link
       href={href}
       className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", {

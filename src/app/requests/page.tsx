@@ -1,6 +1,6 @@
 'use client';
 
-import { useForm, FormProvider } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useAtom } from 'jotai';
+import { requestsAtom, type Request } from '@/lib/requests-store';
+import { useRouter } from 'next/navigation';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -42,6 +45,9 @@ type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 export default function RequestsPage() {
   const { toast } = useToast();
+  const [requests, setRequests] = useAtom(requestsAtom);
+  const router = useRouter();
+
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
@@ -53,12 +59,18 @@ export default function RequestsPage() {
   });
 
   function onSubmit(data: RequestFormValues) {
-    console.log(data);
+    const newRequest: Request = {
+      id: `req-${Date.now()}`,
+      ...data,
+    };
+    setRequests(prev => [newRequest, ...prev]);
+
     toast({
       title: 'Request Submitted!',
       description: 'Your request has been successfully submitted to the community.',
     });
     form.reset();
+    router.push('/my-requests');
   }
 
   return (
