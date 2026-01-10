@@ -11,27 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, User } from 'lucide-react';
+import { Settings, User } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth, useUser } from '@/firebase';
-import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { useUser } from '@/firebase';
 
 export function UserNav() {
-  const auth = useAuth();
   const user = useUser();
-  const router = useRouter();
-
-  const handleSignOut = async () => {
-    if (auth) {
-      try {
-        await signOut(auth);
-        router.push('/login');
-      } catch (error) {
-        console.error('Error signing out:', error);
-      }
-    }
-  };
 
   if (!user) {
     return null;
@@ -80,11 +65,6 @@ export function UserNav() {
             </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
