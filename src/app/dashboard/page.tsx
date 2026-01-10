@@ -32,7 +32,7 @@ import {
 } from 'firebase/firestore';
 import type { Item } from '@/ai/flows/semantic-item-match';
 import { useRouter } from 'next/navigation';
-import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -85,15 +85,6 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
 
     try {
-      // For simplicity, we assume the lender has the item.
-      // A robust implementation would first verify item availability.
-      const matchedItem = {
-        id: "placeholder-id",
-        name: request.itemName,
-        imageUrl: 'https://picsum.photos/seed/placeholder/320/180',
-        karma: 10,
-      };
-
       // 1. Generate a 6-digit handshake code
       const handshakeCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -101,12 +92,12 @@ export default function Dashboard() {
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
-        itemId: matchedItem.id,
-        itemName: matchedItem.name,
-        itemImageUrl: matchedItem.imageUrl,
-        karma: matchedItem.karma,
+        itemId: "temp-item-id", // This should be determined by item selection
+        itemName: request.itemName,
+        itemImageUrl: `https://picsum.photos/seed/${request.itemName}/320/180`,
+        karma: 10, // This should come from the item
         startTime: serverTimestamp(),
-        status: 'pending-handshake', // New status for code verification
+        status: 'pending-handshake', // Initial status for code verification
         handshakeCode: handshakeCode,
       };
 
@@ -119,7 +110,7 @@ export default function Dashboard() {
 
       toast({
         title: 'Request Fulfilled!',
-        description: `A transaction has been created for "${matchedItem.name}".`,
+        description: `A transaction has been created for "${request.itemName}".`,
       });
 
       // 4. Navigate to the transaction page to display the code
@@ -395,3 +386,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    

@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, ArrowLeft, CheckCircle, Lightbulb } from 'lucide-react';
+import { KeyRound, ArrowLeft, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Loader2 } from 'lucide-react';
+
 
 type Transaction = {
   id: string;
@@ -67,7 +69,7 @@ export default function TransactionPage() {
         transactionDocRef,
         {
           status: 'active',
-          startTime: serverTimestamp(),
+          startTime: serverTimestamp(), // Set the official start time
         },
         { merge: true }
       );
@@ -89,11 +91,12 @@ export default function TransactionPage() {
   const handleEndRental = () => {
     if (!transaction || !transactionDocRef || !isBorrower) return;
     
+    // Generate a new code for the return handshake
     const endCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     setDocumentNonBlocking(transactionDocRef, {
       status: 'pending-end',
-      handshakeCode: endCode,
+      handshakeCode: endCode, // Overwrite with the new return code
     }, { merge: true });
     
      toast({
@@ -110,9 +113,10 @@ export default function TransactionPage() {
       setDocumentNonBlocking(transactionDocRef, {
           status: 'completed',
           actualEndTime: serverTimestamp(),
+          handshakeCode: '', // Clear the code after use
       }, { merge: true });
 
-      // Future: Award Karma points here
+      // Future: Award Karma points to both users here
       
       toast({
           title: 'Rental Completed!',
@@ -130,7 +134,7 @@ export default function TransactionPage() {
 
 
   if (isLoading) {
-    return <div>Loading transaction...</div>;
+    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
   }
 
   if (error) {
@@ -184,11 +188,12 @@ export default function TransactionPage() {
               layout="fill"
               objectFit="cover"
               className="rounded-lg"
+              data-ai-hint="item"
             />
           </div>
           <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
 
-          {/* Lender's view: Display the code */}
+          {/* Lender's view: Display the code to start or end */}
           {isLender && (transaction.status === 'pending-handshake' || transaction.status === 'pending-end') && (
             <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
               <p className="text-sm text-muted-foreground">Verification Code</p>
@@ -198,7 +203,7 @@ export default function TransactionPage() {
             </div>
           )}
 
-          {/* Borrower's view: Enter the code */}
+          {/* Borrower's view: Enter the code to start */}
           {isBorrower && transaction.status === 'pending-handshake' && (
             <div className="w-full space-y-4">
               <div className="flex items-center gap-2">
@@ -214,12 +219,12 @@ export default function TransactionPage() {
                 />
               </div>
               <Button onClick={handleVerifyCode} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
-                {isVerifying ? 'Verifying...' : 'Start Rental'}
+                {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Start Rental'}
               </Button>
             </div>
           )}
           
-           {/* Lender's view: Enter return code */}
+           {/* Lender's view: Enter return code to complete */}
           {isLender && transaction.status === 'pending-end' && (
             <div className="w-full space-y-4">
               <div className="flex items-center gap-2">
@@ -235,12 +240,22 @@ export default function TransactionPage() {
                 />
               </div>
               <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
-                {isVerifying ? 'Confirming...' : 'Confirm Return'}
+                {isVerifying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Confirm Return'}
               </Button>
             </div>
           )}
 
+          {/* Borrower's view: Show return code */}
+          {isBorrower && transaction.status === 'pending-end' && (
+             <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+              <p className="text-sm text-muted-foreground">Return Code</p>
+              <p className="text-4xl font-bold tracking-widest text-primary">
+                {transaction.handshakeCode}
+              </p>
+            </div>
+          )}
 
+          {/* Active rental state */}
           {transaction.status === 'active' && (
             <div className="flex flex-col items-center gap-4 p-6 bg-green-50 border-green-200 border rounded-lg w-full">
               <CheckCircle className="h-12 w-12 text-green-500" />
@@ -253,6 +268,7 @@ export default function TransactionPage() {
             </div>
           )}
 
+          {/* Completed rental state */}
           {transaction.status === 'completed' && (
             <div className="flex flex-col items-center gap-4 p-6 bg-gray-50 border-gray-200 border rounded-lg w-full">
               <CheckCircle className="h-12 w-12 text-gray-500" />
@@ -264,3 +280,5 @@ export default function TransactionPage() {
     </div>
   );
 }
+
+    
