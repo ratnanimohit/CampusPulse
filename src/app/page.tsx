@@ -145,19 +145,13 @@ export default function Dashboard() {
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center">
+          <CardHeader>
              <div className="grid gap-2">
               <CardTitle className="font-headline">Community Requests</CardTitle>
               <CardDescription>
                 Items being requested by others on campus.
               </CardDescription>
             </div>
-            <Button asChild size="sm" className="ml-auto gap-1">
-              <Link href="/my-requests">
-                View All
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </Button>
           </CardHeader>
            <CardContent>
             {requests.length > 0 ? (
