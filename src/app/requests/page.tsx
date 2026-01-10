@@ -62,19 +62,19 @@ export default function RequestsPage() {
 
   function onSubmit(data: RequestFormValues) {
     if (!user || !firestore) {
-        toast({
-            variant: "destructive",
-            title: "Authentication Error",
-            description: "You must be logged in to create a request.",
-        });
-        return;
+      toast({
+        variant: 'destructive',
+        title: 'Authentication Error',
+        description: 'You must be logged in to create a request.',
+      });
+      return;
     }
 
     const newRequest = {
       ...data,
       requesterId: user.uid,
     };
-    
+
     addDocumentNonBlocking(collection(firestore, 'itemRequests'), newRequest);
 
     toast({
@@ -136,7 +136,10 @@ export default function RequestsPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Urgency Level</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select urgency" />
@@ -173,7 +176,9 @@ export default function RequestsPage() {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={!user}>Submit Request</Button>
+            <Button type="submit" disabled={!user}>
+              Submit Request
+            </Button>
           </CardFooter>
         </Card>
       </form>
