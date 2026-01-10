@@ -27,16 +27,13 @@ import {
   query,
   where,
   doc,
-  deleteDoc,
   getDocs,
-  addDoc,
   serverTimestamp,
-  updateDoc,
 } from 'firebase/firestore';
 import type { Item } from '@/ai/flows/semantic-item-match';
 import { useRouter } from 'next/navigation';
 import { findBestItemMatch } from '@/ai/flows/semantic-item-match';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -141,17 +138,18 @@ export default function Dashboard() {
       };
 
       const transactionsCol = collection(firestore, 'transactions');
+      // Using addDoc and awaiting its result to get the ID for navigation
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
 
       // 4. Mark the item as unavailable
       const itemDocRef = doc(firestore, 'itemListings', matchedItem.id);
-      await updateDoc(itemDocRef, {
+      updateDocumentNonBlocking(itemDocRef, {
         available: false,
       });
 
       // 5. Delete the original item request
       const requestDocRef = doc(firestore, 'itemRequests', request.id);
-      await deleteDoc(requestDocRef);
+      deleteDocumentNonBlocking(requestDocRef);
 
       toast({
         title: 'Request Fulfilled!',
@@ -257,7 +255,7 @@ export default function Dashboard() {
             </CardTitle>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
+              viewBox="0-0 24 24"
               fill="none"
               stroke="currentColor"
               strokeLinecap="round"

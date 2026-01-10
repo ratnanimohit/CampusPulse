@@ -54,7 +54,7 @@ The available items are (provided as a JSON array of objects):
 Analyze the requested item and the list of available items. Determine which available item is the most similar or could best fulfill the request. For example, a "phone charger" request could be fulfilled by a "USB-C charger" or "iPhone cable". An "electric iron" could be fulfilled by a "steam iron".
 
 If you find a good match, return the entire JSON object of the matched item in the 'matchedItem' field.
-If none of the available items are a good semantic match for the requested item, return null for 'matchedItem'.
+If none of the available items are a good semantic match for the requested item, you MUST return null for the 'matchedItem' field.
 
 Provide a brief reasoning for your decision in the 'reasoning' field.`,
 });
@@ -79,6 +79,17 @@ const semanticItemMatchFlow = ai.defineFlow(
         matchedItem: null,
         reasoning: "The AI model could not determine a match.",
       };
+    }
+    
+    // Ensure that if a matched item is returned, it exists in the original availableItems list.
+    if (output.matchedItem) {
+        const isValidMatch = input.availableItems.some(item => item.id === output.matchedItem!.id);
+        if (!isValidMatch) {
+            return {
+                matchedItem: null,
+                reasoning: `The AI suggested a match, but it was not found in the user's available items.`
+            }
+        }
     }
     
     return output;
