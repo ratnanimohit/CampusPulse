@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
@@ -16,10 +16,27 @@ export type Item = {
     karma: number;
 };
 
+const ITEMS_STORAGE_KEY = 'userLockerItems';
+
 export default function LockerPage() {
     const [userItems, setUserItems] = useState<Item[]>([]);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    useEffect(() => {
+        const storedItems = localStorage.getItem(ITEMS_STORAGE_KEY);
+        if (storedItems) {
+            setUserItems(JSON.parse(storedItems));
+        }
+        setIsLoaded(true);
+    }, []);
+
+    useEffect(() => {
+        if (isLoaded) {
+            localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(userItems));
+        }
+    }, [userItems, isLoaded]);
 
     const handleItemAdded = (newItem: NewItem) => {
         const item: Item = {
@@ -40,6 +57,10 @@ export default function LockerPage() {
         );
         setEditingItem(null);
     };
+    
+    if (!isLoaded) {
+        return <div>Loading locker...</div>;
+    }
 
     return (
         <div className="flex flex-col gap-8">
