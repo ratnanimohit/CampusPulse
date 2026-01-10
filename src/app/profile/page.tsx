@@ -57,15 +57,15 @@ export default function ProfilePage() {
                     <CardContent className="space-y-4">
                          <div>
                             <p className="text-sm text-muted-foreground">Total Karma Points</p>
-                            <p className="text-2xl font-bold">1,250</p>
+                            <p className="text-2xl font-bold">0</p>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Lender Rating</p>
-                            <p className="text-2xl font-bold">4.8 / 5.0</p>
+                            <p className="text-2xl font-bold">N/A</p>
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Borrower Rating</p>
-                            <p className="text-2xl font-bold">4.9 / 5.0</p>
+                            <p className="text-2xl font-bold">N/A</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -75,19 +75,19 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col items-center justify-center p-4 bg-accent/50 rounded-lg">
-                            <p className="text-3xl font-bold">12</p>
+                            <p className="text-3xl font-bold">0</p>
                             <p className="text-sm text-muted-foreground">Items Lent</p>
                         </div>
                          <div className="flex flex-col items-center justify-center p-4 bg-accent/50 rounded-lg">
-                            <p className="text-3xl font-bold">8</p>
+                            <p className="text-3xl font-bold">0</p>
                             <p className="text-sm text-muted-foreground">Items Borrowed</p>
                         </div>
                          <div className="flex flex-col items-center justify-center p-4 bg-accent/50 rounded-lg">
-                            <p className="text-3xl font-bold">20</p>
+                            <p className="text-3xl font-bold">0</p>
                             <p className="text-sm text-muted-foreground">Total Transactions</p>
                         </div>
                          <div className="flex flex-col items-center justify-center p-4 bg-accent/50 rounded-lg">
-                            <p className="text-3xl font-bold">3</p>
+                            <p className="text-3xl font-bold">0</p>
                             <p className="text-sm text-muted-foreground">Active Rentals</p>
                         </div>
                     </CardContent>
