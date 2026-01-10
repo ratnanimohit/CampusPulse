@@ -5,6 +5,7 @@ import { useAuth, useUser } from '@/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,8 @@ export default function LoginPage() {
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -38,103 +38,90 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  const handleAuthAction = async (e: React.FormEvent) => {
+  const handleDemoAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) {
       setError('Authentication service is not available.');
       return;
     }
+
+    if (!email.endsWith('@gla.ac.in')) {
+      const message = 'Only @gla.ac.in emails are allowed.';
+      setError(message);
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Email',
+        description: message,
+      });
+      return;
+    }
+
+    setLoading(true);
     setError(null);
+    const demoPassword = 'defaultPassword123'; // Static password for demo purposes
 
     try {
-      if (isSignUp) {
-        if (!email.endsWith('@gla.ac.in')) {
-          const message = 'Only @gla.ac.in emails are allowed for sign up.';
-          setError(message);
-          toast({
-            variant: 'destructive',
-            title: 'Invalid Email',
-            description: message,
-          });
-          return;
-        }
-        await createUserWithEmailAndPassword(auth, email, password);
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email);
+
+      if (signInMethods.length > 0) {
+        // User exists, sign them in
+        await signInWithEmailAndPassword(auth, email, demoPassword);
+        toast({
+          title: 'Signed In!',
+          description: 'Welcome back!',
+        });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        // User does not exist, create a new account
+        await createUserWithEmailAndPassword(auth, email, demoPassword);
+        toast({
+          title: 'Account Created!',
+          description: 'Welcome! A demo account has been created for you.',
+        });
       }
-      toast({
-        title: isSignUp ? 'Account Created!' : 'Signed In!',
-        description: isSignUp
-          ? 'Welcome! You have been successfully signed up.'
-          : 'Welcome back!',
-      });
       router.push('/');
     } catch (err: any) {
-      let friendlyMessage = 'An unexpected error occurred.';
-      switch (err.code) {
-        case 'auth/user-not-found':
-          friendlyMessage = 'No account found with this email. Please sign up.';
-          break;
-        case 'auth/wrong-password':
-          friendlyMessage = 'Incorrect password. Please try again.';
-          break;
-        case 'auth/email-already-in-use':
-          friendlyMessage = 'This email is already in use. Please sign in.';
-          break;
-        case 'auth/weak-password':
-          friendlyMessage = 'The password must be at least 6 characters long.';
-          break;
-        case 'auth/invalid-email':
-          friendlyMessage = 'Please enter a valid email address.';
-          break;
-        default:
-          friendlyMessage = err.message;
-          break;
+      let friendlyMessage = 'An unexpected error occurred. Please try again.';
+      // Handle cases where password for an existing account is not the demo one
+      if (err.code === 'auth/wrong-password') {
+          friendlyMessage = "This email exists with a different password. This demo mode only works for accounts created within it.";
+      } else if (err.code === 'auth/invalid-email') {
+        friendlyMessage = 'Please enter a valid email address.';
       }
+
       setError(friendlyMessage);
       toast({
         variant: 'destructive',
         title: 'Authentication Failed',
         description: friendlyMessage,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <Card className="w-full max-w-md">
-        <form onSubmit={handleAuthAction}>
+        <form onSubmit={handleDemoAuth}>
           <CardHeader className="text-center">
             <CardTitle className="text-2xl font-headline">
-              {isSignUp ? 'Create an Account' : 'Welcome Back'}
+              Campus Collab Access
             </CardTitle>
             <CardDescription>
-              {isSignUp
-                ? 'Use your @gla.ac.in email to get started.'
-                : 'Sign in to access your dashboard.'}
+              Enter your GLA University email to sign in or sign up.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">University Email</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="student@gla.ac.in"
+                placeholder="your-name@gla.ac.in"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
+                disabled={loading}
               />
             </div>
             {error && (
@@ -142,21 +129,9 @@ export default function LoginPage() {
             )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={!auth}>
+            <Button type="submit" className="w-full" disabled={!auth || loading}>
                <Mail className="mr-2 h-4 w-4" />
-              {isSignUp ? 'Sign Up' : 'Sign In'}
-            </Button>
-            <Button
-              type="button"
-              variant="link"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError(null);
-              }}
-            >
-              {isSignUp
-                ? 'Already have an account? Sign In'
-                : "Don't have an account? Sign Up"}
+              {loading ? 'Authenticating...' : 'Proceed to Dashboard'}
             </Button>
           </CardFooter>
         </form>
