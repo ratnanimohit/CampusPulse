@@ -29,7 +29,6 @@ import {
   doc,
   deleteDoc,
   getDocs,
-  limit,
   addDoc,
   serverTimestamp,
   updateDoc,
@@ -108,15 +107,14 @@ export default function Dashboard() {
       }
       
       const availableItems = userItemsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Item);
-      const availableItemNames = availableItems.map(item => item.name);
-
+      
       // 2. Use AI to find the best semantic match
       const matchResult = await findBestItemMatch({
           requestedItemName: request.itemName,
-          availableItemNames: availableItemNames,
+          availableItems: availableItems.map(item => ({ id: item.id, name: item.name })),
       });
 
-      if (!matchResult.matchedItemName) {
+      if (!matchResult.matchedItemId) {
          toast({
           variant: 'destructive',
           title: 'No suitable item found',
@@ -126,14 +124,14 @@ export default function Dashboard() {
         return;
       }
 
-      const matchedItem = availableItems.find(item => item.name === matchResult.matchedItemName);
+      const matchedItem = availableItems.find(item => item.id === matchResult.matchedItemId);
 
       if (!matchedItem) {
           // This should rarely happen if the AI is working correctly
            toast({
             variant: 'destructive',
             title: 'Matching Error',
-            description: 'Could not find the matched item data.',
+            description: 'Could not find the matched item data after AI selection.',
           });
           setIsFulfilling(null);
           return;
