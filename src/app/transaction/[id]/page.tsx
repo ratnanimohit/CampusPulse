@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
-import { doc, DocumentData, updateDoc } from 'firebase/firestore';
+import { doc, DocumentData, updateDoc, serverTimestamp } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useState } from 'react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { QrScannerDialog } from '@/components/qr-scanner';
 
 type Transaction = {
   id: string;
@@ -53,6 +54,7 @@ export default function TransactionPage() {
   } = useDoc<Transaction>(transactionDocRef);
   
   const [qrCodeDataUri, setQrCodeDataUri] = useState<string>('');
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   const isLender = user?.uid === transaction?.lenderId;
   const isBorrower = user?.uid === transaction?.borrowerId;
@@ -61,10 +63,10 @@ export default function TransactionPage() {
   useEffect(() => {
     if (typeof window !== 'undefined' && transaction) {
       let qrContent = '';
-      if (transaction.status === 'pending-start' && transaction.qrCodeStart) {
-        qrContent = transaction.qrCodeStart;
-      } else if (transaction.status === 'pending-end' && transaction.qrCodeEnd) {
-        qrContent = transaction.qrCodeEnd;
+      if (transaction.status === 'pending-start' && isLender) {
+        qrContent = transaction.qrCodeStart || '';
+      } else if (transaction.status === 'pending-end' && isBorrower) {
+        qrContent = transaction.qrCodeEnd || '';
       }
 
       if (qrContent) {
@@ -79,26 +81,46 @@ export default function TransactionPage() {
             });
           })
           .catch(err => console.error('Failed to load qrcode library', err));
+      } else {
+        setQrCodeDataUri('');
       }
     }
-  }, [transaction]);
+  }, [transaction, isLender, isBorrower]);
 
 
-  const handleStartScan = () => {
-    // This would open a QR scanner. For this MVP, we simulate a successful scan.
-    // In a real app, you'd use a library like react-qr-reader.
-    if (!transaction || !transactionDocRef || !isBorrower) return;
+  const handleScanResult = (scannedData: string | null) => {
+    if (!scannedData || !transaction || !transactionDocRef) return;
 
-    if (transaction.status === 'pending-start') {
-      setDocumentNonBlocking(transactionDocRef, {
-        status: 'active'
-      }, { merge: true });
+    if (isBorrower && transaction.status === 'pending-start' && scannedData === transaction.qrCodeStart) {
+        setDocumentNonBlocking(transactionDocRef, {
+            status: 'active',
+            startTime: serverTimestamp(),
+        }, { merge: true });
 
+        toast({
+            title: 'Rental Started!',
+            description: `You are now borrowing ${transaction.itemName}.`,
+        });
+    } else if (isLender && transaction.status === 'pending-end' && scannedData === transaction.qrCodeEnd) {
+        setDocumentNonBlocking(transactionDocRef, {
+            status: 'completed',
+            actualEndTime: serverTimestamp(),
+        }, { merge: true });
+
+        // Future: Award Karma points here
+        
+        toast({
+            title: 'Rental Completed!',
+            description: `The item has been successfully returned.`,
+        });
+    } else {
       toast({
-        title: 'Rental Started!',
-        description: `You are now borrowing ${transaction.itemName}.`,
+        variant: 'destructive',
+        title: 'Scan Failed',
+        description: 'The scanned QR code is incorrect for this transaction.',
       });
     }
+     setIsScannerOpen(false);
   };
   
   const handleEndRental = () => {
@@ -154,6 +176,13 @@ export default function TransactionPage() {
 
   return (
     <div className="flex flex-col gap-4 items-center">
+        <QrScannerDialog 
+            isOpen={isScannerOpen}
+            onOpenChange={setIsScannerOpen}
+            onScan={handleScanResult}
+            title="Scan QR Code"
+            description="Point your camera at the QR code to proceed."
+        />
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className='flex justify-start items-center mb-4'>
@@ -178,17 +207,22 @@ export default function TransactionPage() {
           </div>
           <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
 
-          {(transaction.status === 'pending-start' || transaction.status === 'pending-end') && qrCodeDataUri ? (
+          {qrCodeDataUri ? (
             <div className="flex flex-col items-center gap-4 p-4 border border-dashed rounded-lg">
                 <Image src={qrCodeDataUri} alt="QR Code" width={250} height={250} />
                 <p className="text-sm text-muted-foreground text-center">
                   {transaction.status === 'pending-start' && isLender && 'Borrower must scan to begin.'}
-                  {transaction.status === 'pending-start' && isBorrower && 'Scan code to begin.'}
                   {transaction.status === 'pending-end' && isBorrower && 'Lender must scan to end.'}
-                  {transaction.status === 'pending-end' && isLender && 'Scan code to end.'}
                 </p>
             </div>
           ) : null}
+
+          {(transaction.status !== 'active' && transaction.status !== 'completed' && !qrCodeDataUri) && (
+              <div className="p-4 text-center">
+                  <p className="text-muted-foreground">Waiting for other user to generate QR code...</p>
+              </div>
+          )}
+
 
           {transaction.status === 'active' && (
              <div className="flex flex-col items-center gap-4 p-6 bg-green-50 border-green-200 border rounded-lg">
@@ -204,11 +238,10 @@ export default function TransactionPage() {
             </div>
           )}
 
-
           {isBorrower && transaction.status === 'pending-start' && (
-             <Button onClick={handleStartScan}>
+             <Button onClick={() => setIsScannerOpen(true)}>
                 <QrCode className="mr-2 h-4 w-4"/>
-                Simulate Scan to Start
+                Scan to Start
              </Button>
           )}
 
@@ -219,9 +252,9 @@ export default function TransactionPage() {
           )}
 
           {isLender && transaction.status === 'pending-end' && (
-            <Button>
+            <Button onClick={() => setIsScannerOpen(true)}>
               <QrCode className="mr-2 h-4 w-4"/>
-              Simulate Scan to End
+              Scan to End
             </Button>
           )}
 
@@ -230,5 +263,3 @@ export default function TransactionPage() {
     </div>
   );
 }
-
-    
