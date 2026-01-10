@@ -1,13 +1,15 @@
 'use client';
 
-import { useUser } from '@/firebase/auth/use-user';
+import { useUser } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
+import { useAuth } from '@/firebase';
 
 export function AppContent({ children }: { children: React.ReactNode }) {
   const user = useUser();
+  const auth = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 

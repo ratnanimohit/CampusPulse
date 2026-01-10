@@ -42,7 +42,7 @@ type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 export default function RequestsPage() {
   const { toast } = useToast();
-  const methods = useForm<RequestFormValues>({
+  const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
       itemName: '',
@@ -58,103 +58,101 @@ export default function RequestsPage() {
       title: 'Request Submitted!',
       description: 'Your request has been successfully submitted to the community.',
     });
-    methods.reset();
+    form.reset();
   }
 
   return (
-    <FormProvider {...methods}>
-      <Form {...methods}>
-        <form onSubmit={methods.handleSubmit(onSubmit)}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline text-2xl">
-                Create a New Request
-              </CardTitle>
-              <CardDescription>
-                Let the community know what item you need.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <FormField
-                control={methods.control}
-                name="itemName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Item Name</FormLabel>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-headline text-2xl">
+              Create a New Request
+            </CardTitle>
+            <CardDescription>
+              Let the community know what item you need.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <FormField
+              control={form.control}
+              name="itemName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Item Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Electric Iron, Graphic Calculator"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="reason"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason for Request</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe why you need this item..."
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="urgency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Urgency Level</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <Input
-                        placeholder="e.g., Electric Iron, Graphic Calculator"
-                        {...field}
-                      />
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select urgency" />
+                      </SelectTrigger>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={methods.control}
-                name="reason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reason for Request</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe why you need this item..."
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={methods.control}
-                name="urgency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Urgency Level</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select urgency" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="normal">
-                          Normal Need (Standard distance)
-                        </SelectItem>
-                        <SelectItem value="medium">
-                          Medium Need (Extended distance)
-                        </SelectItem>
-                        <SelectItem value="emergency">
-                          Emergency Need (Maximum distance)
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={methods.control}
-                name="requiredBy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Required By</FormLabel>
-                    <FormControl>
-                      <Input type="datetime-local" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </CardContent>
-            <CardFooter>
-              <Button type="submit">Submit Request</Button>
-            </CardFooter>
-          </Card>
-        </form>
-      </Form>
-    </FormProvider>
+                    <SelectContent>
+                      <SelectItem value="normal">
+                        Normal Need (Standard distance)
+                      </SelectItem>
+                      <SelectItem value="medium">
+                        Medium Need (Extended distance)
+                      </SelectItem>
+                      <SelectItem value="emergency">
+                        Emergency Need (Maximum distance)
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="requiredBy"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Required By</FormLabel>
+                  <FormControl>
+                    <Input type="datetime-local" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </CardContent>
+          <CardFooter>
+            <Button type="submit">Submit Request</Button>
+          </CardFooter>
+        </Card>
+      </form>
+    </Form>
   );
 }

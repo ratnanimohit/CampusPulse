@@ -2,11 +2,10 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { useUser } from '@/firebase';
 import { Chrome } from 'lucide-react';
 
 export default function LoginPage() {
@@ -21,14 +20,16 @@ export default function LoginPage() {
   }, [user, router]);
 
   const handleSignIn = async () => {
-    if (auth) {
-      const provider = new GoogleAuthProvider();
-      try {
-        await signInWithPopup(auth, provider);
-        router.push('/');
-      } catch (error) {
-        console.error('Error signing in with Google', error);
-      }
+    if (!auth) {
+      console.error("Auth context is not available");
+      return;
+    };
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing in with Google', error);
     }
   };
 
@@ -40,7 +41,7 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button className="w-full" onClick={handleSignIn}>
+          <Button className="w-full" onClick={handleSignIn} disabled={!auth}>
             <Chrome className="mr-2 h-4 w-4" />
             Sign in with Google
           </Button>
