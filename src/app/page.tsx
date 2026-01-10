@@ -1,6 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,332 +13,245 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { PlusCircle, FileX } from 'lucide-react';
-import Link from 'next/link';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import {
-  collection,
-  query,
-  where,
-  doc,
-  deleteDoc,
-} from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
+import { setDoc, doc } from 'firebase/firestore';
+import { Loader2 } from 'lucide-react';
+import { FirebaseError } from 'firebase/app';
 
-type ItemRequest = {
-  id: string;
-  itemName: string;
-  urgency: 'emergency' | 'medium' | 'normal';
-};
+const glaEmailValidator = (email: string) => email.endsWith('@gla.ac.in');
 
-const transactions: any[] = [];
+const loginSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address.')
+    .refine(glaEmailValidator, {
+      message: "Email must be a '@gla.ac.in' address.",
+    }),
+  password: z.string().min(6, 'Password must be at least 6 characters long.'),
+});
 
-export default function Dashboard() {
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const [userName, setUserName] = useState('');
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formType, setFormType] = useState<'login' | 'signup'>('login');
 
-  const requestsQuery = useMemoFirebase(
-    () => firestore && collection(firestore, 'itemRequests'),
-    [firestore]
-  );
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
-  const [isClient, setIsClient] = useState(false);
+  const form = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    if (isClient) {
-      const savedSettings = localStorage.getItem('userSettings');
-      const defaultName = user?.displayName || 'Student';
-
-      if (savedSettings) {
-        try {
-          const { name } = JSON.parse(savedSettings);
-          setUserName(name || defaultName);
-        } catch (e) {
-          setUserName(defaultName);
-        }
-      } else {
-        setUserName(defaultName);
-      }
-    }
-  }, [user, isClient]);
-
-  const fulfillRequest = (requestId: string) => {
-    if (!firestore) return;
-    const requestDocRef = doc(firestore, 'itemRequests', requestId);
-    deleteDocumentNonBlocking(requestDocRef);
-    toast({
-      title: 'Request Fulfilled!',
-      description: 'Thank you for helping a member of your community!',
-    });
-  };
-  
-  if (!isClient) {
-    return null; // Or a loading spinner
+  if (isUserLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-16 w-16 animate-spin" />
+      </div>
+    );
   }
 
+  if (user) {
+    router.replace('/dashboard');
+    return null;
+  }
+
+  const handleAuthError = (error: FirebaseError) => {
+    let title = 'An error occurred';
+    let description = error.message;
+
+    switch (error.code) {
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+        title = 'Login Failed';
+        description = 'Invalid email or password. Please try again.';
+        break;
+      case 'auth/email-already-in-use':
+        title = 'Sign-up Failed';
+        description = 'An account with this email already exists. Please log in.';
+        break;
+      case 'auth/invalid-email':
+         title = 'Invalid Email';
+         description = 'Please enter a valid email address.';
+         break;
+      case 'auth/weak-password':
+          title = 'Weak Password';
+          description = 'The password must be at least 6 characters long.';
+          break;
+      default:
+        // Keep generic for other Firebase errors
+        break;
+    }
+     toast({
+        variant: 'destructive',
+        title,
+        description,
+      });
+  };
+
+  const onSubmit = async (data: LoginFormValues) => {
+    setIsSubmitting(true);
+    try {
+      if (formType === 'login') {
+        await signInWithEmailAndPassword(auth, data.email, data.password);
+        toast({
+          title: 'Login Successful!',
+          description: "Welcome back to Campus Collab!",
+        });
+        router.push('/dashboard');
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          data.email,
+          data.password
+        );
+        const newUser = userCredential.user;
+        const [firstName, lastName] = newUser.email?.split('@')[0].split('.') || ['New', 'User'];
+
+        // Create user profile in Firestore
+        await setDoc(doc(firestore, 'userProfiles', newUser.uid), {
+          id: newUser.uid,
+          email: newUser.email,
+          firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1),
+          lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1) : '',
+          karmaPoints: 0,
+          transactionCount: 0,
+        });
+
+        toast({
+          title: 'Account Created!',
+          description: 'Welcome to Campus Collab! You can now log in.',
+        });
+        setFormType('login'); // Switch to login view after successful signup
+        form.reset();
+      }
+    } catch (error) {
+        if (error instanceof FirebaseError) {
+            handleAuthError(error);
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'An unexpected error occurred.',
+                description: 'Please try again later.',
+            });
+        }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold font-headline">
-            Welcome back, {userName}!
-          </h1>
-          <p className="text-muted-foreground">
-            Here's what's happening on campus today.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button asChild>
-            <Link href="/requests">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Request
-            </Link>
-          </Button>
-          <Button variant="secondary" asChild>
-            <Link href="/locker">Add Item to Locker</Link>
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Karma Points</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z"></path>
-              <path d="M12 16.5A4.5 4.5 0 1 0 7.5 12 4.5 4.5 0 0 0 12 16.5z"></path>
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No activity yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Items Lent</CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No items lent yet</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Items Borrowed
-            </CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="m12 8-4 4 4 4"></path>
-              <path d="M16 8v8"></path>
-              <path d="M8 12h12"></path>
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              No items borrowed yet
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Transactions
-            </CardTitle>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
-            >
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-            </svg>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              No active transactions
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-8 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="font-headline">Recent Transactions</CardTitle>
-            <CardDescription>
-              An overview of your recent rental activity.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {transactions.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead className="hidden sm:table-cell">User</TableHead>
-                    <TableHead className="hidden md:table-cell">Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Karma</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map(tx => (
-                    <TableRow key={tx.id}>
-                      <TableCell className="font-medium">{tx.item}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {tx.user}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        <Badge
-                          variant={tx.type === 'Lent' ? 'secondary' : 'outline'}
-                        >
-                          {tx.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{tx.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">
-                        {tx.karma}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <Card className="w-full max-w-sm">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-headline">
+            Welcome to Campus Collab
+          </CardTitle>
+          <CardDescription>
+            {formType === 'login'
+              ? 'Sign in to your account to continue.'
+              : 'Create an account to join the community.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>GLA Email Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="your.name@gla.ac.in"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                        disabled={isSubmitting}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {formType === 'login' ? 'Sign In' : 'Sign Up'}
+              </Button>
+            </form>
+          </Form>
+          <div className="mt-4 text-center text-sm">
+            {formType === 'login' ? (
+              <>
+                Don&apos;t have an account?{' '}
+                <Button
+                  variant="link"
+                  className="p-0"
+                  onClick={() => {
+                    setFormType('signup');
+                    form.reset();
+                  }}
+                >
+                  Sign Up
+                </Button>
+              </>
             ) : (
-              <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
-                <FileX className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No recent transactions.
-                </p>
-              </div>
+              <>
+                Already have an account?{' '}
+                <Button
+                  variant="link"
+                  className="p-0"
+                  onClick={() => {
+                    setFormType('login');
+                    form.reset();
+                  }}
+                >
+                  Sign In
+                </Button>
+              </>
             )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="grid gap-2">
-              <CardTitle className="font-headline">
-                Community Requests
-              </CardTitle>
-              <CardDescription>
-                Items being requested by others on campus.
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {isLoadingRequests ? (
-              <p>Loading requests...</p>
-            ) : requests && requests.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Urgency</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requests.slice(0, 3).map(req => (
-                    <TableRow key={req.id}>
-                      <TableCell className="font-medium">
-                        {req.itemName}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            req.urgency === 'emergency'
-                              ? 'destructive'
-                              : req.urgency === 'medium'
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                        >
-                          {req.urgency.charAt(0).toUpperCase() +
-                            req.urgency.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => fulfillRequest(req.id)}
-                          disabled={user?.uid === (req as any).requesterId}
-                        >
-                          Fulfill
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
-                <FileX className="h-8 w-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">
-                  No active community requests.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

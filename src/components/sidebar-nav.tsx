@@ -10,11 +10,13 @@ import {
   Settings,
   History,
   Package2,
-  FileQuestion
+  FileQuestion,
+  LogOut,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
+import { useAuth } from '@/firebase';
 
 interface SidebarNavProps extends ComponentProps<'nav'> {
   isMobile?: boolean;
@@ -22,8 +24,10 @@ interface SidebarNavProps extends ComponentProps<'nav'> {
 
 export function SidebarNav({ className, isMobile = false, ...props }: SidebarNavProps) {
   const pathname = usePathname();
+  const auth = useAuth();
+  
   const navLinks = [
-    { href: '/', icon: Home, label: 'Dashboard' },
+    { href: '/dashboard', icon: Home, label: 'Dashboard' },
     { href: '/locker', icon: Package, label: 'My Locker' },
     { href: '/requests', icon: PlusCircle, label: 'New Request' },
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
@@ -35,9 +39,10 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     return pathname === href;
   }
 
-  const NavLink = ({ href, icon: Icon, label, badge }: typeof navLinks[0] & { badge?: string }) => (
+  const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: () => void }) => (
     <Link
       href={href}
+      onClick={onClick}
       className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", {
         "text-primary bg-accent": isActive(href),
       })}
@@ -63,14 +68,14 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
         {...props}
       >
         {isMobile && (
-           <Link href="/" className="flex items-center gap-2 font-semibold font-headline p-3">
+           <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline p-3">
               <Package2 className="h-6 w-6 text-primary" />
               <span className="">Campus Collab</span>
             </Link>
         )}
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
       </nav>
-      <div className={cn('mt-auto p-2 lg:px-4')}>
+      <div className={cn('mt-auto p-2 lg:px-4 space-y-1')}>
         <Link
             href="/settings"
             className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", {
@@ -80,6 +85,13 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
             <Settings className="h-4 w-4" />
             Settings
         </Link>
+        <button
+            onClick={() => auth.signOut()}
+            className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary")}
+            >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+        </button>
        </div>
     </div>
   );
