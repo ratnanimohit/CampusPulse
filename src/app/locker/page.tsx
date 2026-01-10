@@ -1,11 +1,16 @@
+'use client';
+
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import Image from 'next/image';
 import { placeholderImages } from '@/lib/placeholder-images.json';
+import { AddItemDialog } from '@/components/add-item-dialog';
 
 export default function LockerPage() {
     const userItems = placeholderImages;
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     return (
         <div className="flex flex-col gap-8">
@@ -14,11 +19,14 @@ export default function LockerPage() {
                     <h1 className="text-3xl font-bold font-headline">My Locker</h1>
                     <p className="text-muted-foreground">Items you have listed for rent.</p>
                 </div>
-                <Button>
+                <Button onClick={() => setIsDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add New Item
                 </Button>
             </div>
+
+            <AddItemDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} />
+
             {userItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {userItems.map(item => (
@@ -48,7 +56,7 @@ export default function LockerPage() {
                     <div className="flex flex-col items-center gap-1 text-center">
                         <h3 className="text-2xl font-bold tracking-tight font-headline">You have no items in your locker</h3>
                         <p className="text-sm text-muted-foreground">Get started by adding an item to rent out.</p>
-                        <Button className="mt-4">
+                        <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Item
                         </Button>
