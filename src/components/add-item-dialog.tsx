@@ -34,13 +34,15 @@ const addItemSchema = z.object({
 });
 
 type AddItemFormValues = z.infer<typeof addItemSchema>;
+export type NewItem = AddItemFormValues;
 
 interface AddItemDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  onItemAdded: (item: NewItem) => void;
 }
 
-export function AddItemDialog({ isOpen, onOpenChange }: AddItemDialogProps) {
+export function AddItemDialog({ isOpen, onOpenChange, onItemAdded }: AddItemDialogProps) {
   const { toast } = useToast();
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -54,6 +56,13 @@ export function AddItemDialog({ isOpen, onOpenChange }: AddItemDialogProps) {
       photoDataUri: '',
     },
   });
+  
+  const resetDialog = () => {
+    form.reset();
+    setImagePreview(null);
+    onOpenChange(false);
+  };
+
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -95,14 +104,12 @@ export function AddItemDialog({ isOpen, onOpenChange }: AddItemDialogProps) {
   };
 
   const onSubmit = (data: AddItemFormValues) => {
-    console.log('Form submitted:', data);
+    onItemAdded(data);
     toast({
       title: 'Item Added!',
       description: `${data.itemName} has been added to your locker.`,
     });
-    form.reset();
-    setImagePreview(null);
-    onOpenChange(false);
+    resetDialog();
   };
 
   return (
@@ -174,7 +181,7 @@ export function AddItemDialog({ isOpen, onOpenChange }: AddItemDialogProps) {
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => resetDialog()}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isIdentifying}>

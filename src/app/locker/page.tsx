@@ -6,11 +6,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { PlusCircle } from "lucide-react";
 import Image from 'next/image';
 import { placeholderImages } from '@/lib/placeholder-images.json';
-import { AddItemDialog } from '@/components/add-item-dialog';
+import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 
 export default function LockerPage() {
-    const userItems = placeholderImages;
+    const [userItems, setUserItems] = useState(placeholderImages);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const handleItemAdded = (newItem: NewItem) => {
+        const item = {
+            id: `item-${Date.now()}`,
+            description: newItem.itemName,
+            imageUrl: newItem.photoDataUri || 'https://picsum.photos/seed/placeholder/320/180',
+            imageHint: 'new item'
+        }
+        setUserItems(prevItems => [item, ...prevItems]);
+    };
 
     return (
         <div className="flex flex-col gap-8">
@@ -25,7 +35,7 @@ export default function LockerPage() {
                 </Button>
             </div>
 
-            <AddItemDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} />
+            <AddItemDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} onItemAdded={handleItemAdded} />
 
             {userItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
