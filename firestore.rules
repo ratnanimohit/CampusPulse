@@ -6,7 +6,7 @@
  * accessible only by the owner. Collaborative data, like transactions, is accessible only
  * to the involved participants. Publicly shared content, such as item listings and requests,
  * is readable by anyone to facilitate app discovery, but write operations are restricted
- * to the original author.
+ * to the original author, with the exception of deleting fulfilled requests.
  *
  * Data Structure:
  * The data is organized into four top-level collections: 'userProfiles', 'itemListings',
@@ -17,8 +17,10 @@
  * - User Privacy: Listing all user profiles is explicitly disallowed to protect user privacy.
  * - Public Discovery: Item listings and item requests are publicly readable to allow users
  *   to browse available items and open requests without being authenticated.
- * - Ownership Enforcement: All write operations on public content (listings, requests) are
+ * - Ownership Enforcement: Write operations on public content (listings, most request actions) are
  *   strictly controlled by a denormalized 'ownerId' or 'requesterId' field on each document.
+ * - Fulfillment Flexibility: Any signed-in user can delete an item request, as this action
+ *   is part of the 'fulfillment' workflow which transitions the public request to a private transaction.
  * - Transaction Secrecy: Transactions are private and can only be viewed or modified by the
  *   two participants (lender and borrower). Listing all transactions is disallowed.
  *
@@ -159,20 +161,20 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages public requests for items. Anyone can read, but only the requester can write.
+     * @description Manages public requests for items. Anyone can read. Only the requester can create/update. Anyone can delete (as part of fulfillment).
      * @path /itemRequests/{itemRequestId}
      * @allow (get, list) Any user, including unauthenticated ones, can read or list item requests.
-     * @allow (create) A signed-in user can create a new request if the `requesterId` in the new data matches their own UID.
+     * @allow (create) A signed-in user can create a new request if the `requesterId` matches their own UID.
+     * @allow (delete) Any signed-in user can delete a request. This is to allow for the 'fulfillment' workflow, where one user fulfills and cleans up another's request.
      * @deny (update) A user cannot update a request they did not create.
-     * @deny (create) A user cannot create a request on behalf of another user.
-     * @principle Implements a "Public Read with Owner-Only Writes" pattern using a denormalized `requesterId`.
+     * @principle Implements "Public Read, Owner-Writes, Authenticated-Delete" for ephemeral requests.
      */
     match /itemRequests/{itemRequestId} {
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn() && request.resource.data.requesterId == request.auth.uid;
       allow update: if isExistingOwner(resource.data.requesterId) && isRequestRequesterImmutable();
-      allow delete: if isExistingOwner(resource.data.requesterId);
+      allow delete: if isSignedIn();
     }
   }
 }
