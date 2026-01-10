@@ -87,7 +87,7 @@ export default function RequestsPage() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="w-full">
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-2xl">
