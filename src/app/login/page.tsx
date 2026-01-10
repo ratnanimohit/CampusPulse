@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -22,21 +23,14 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Mail } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const auth = useAuth();
-  const user = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      router.push('/');
-    }
-  }, [user, router]);
 
   const handleDemoAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +77,8 @@ export default function LoginPage() {
       let friendlyMessage = 'An unexpected error occurred. Please try again.';
       // Handle cases where password for an existing account is not the demo one
       if (err.code === 'auth/wrong-password') {
-          friendlyMessage = "This email exists with a different password. This demo mode only works for accounts created within it.";
+        friendlyMessage =
+          'This email exists with a different password. This demo mode only works for accounts created within it.';
       } else if (err.code === 'auth/invalid-email') {
         friendlyMessage = 'Please enter a valid email address.';
       }
@@ -100,42 +95,60 @@ export default function LoginPage() {
   };
 
   return (
+    <Card className="w-full max-w-md">
+      <form onSubmit={handleDemoAuth}>
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-headline">
+            Campus Collab Access
+          </CardTitle>
+          <CardDescription>
+            Enter your GLA University email to sign in or sign up.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">University Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your-name@gla.ac.in"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </CardContent>
+        <CardFooter className="flex flex-col gap-4">
+          <Button type="submit" className="w-full" disabled={!auth || loading}>
+            <Mail className="mr-2 h-4 w-4" />
+            {loading ? 'Authenticating...' : 'Proceed to Dashboard'}
+          </Button>
+        </CardFooter>
+      </form>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
+  const user = useUser();
+  const router = useRouter();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
-        <form onSubmit={handleDemoAuth}>
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-headline">
-              Campus Collab Access
-            </CardTitle>
-            <CardDescription>
-              Enter your GLA University email to sign in or sign up.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">University Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your-name@gla.ac.in"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={!auth || loading}>
-               <Mail className="mr-2 h-4 w-4" />
-              {loading ? 'Authenticating...' : 'Proceed to Dashboard'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+      {isClient ? <LoginForm /> : null}
     </div>
   );
 }
