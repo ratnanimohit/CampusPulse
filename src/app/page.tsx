@@ -4,20 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, ArrowUpRight } from "lucide-react";
+import { PlusCircle, ArrowUpRight, FileX } from "lucide-react";
 import Link from 'next/link';
 import Image from 'next/image';
-import { placeholderImages } from '@/lib/placeholder-images.json';
 import { useUser } from "@/firebase";
 
-const transactions = [
-  { id: 1, item: "Electric Iron", user: "Ravi Kumar", type: "Lent", status: "Returned", karma: "+5" },
-  { id: 2, item: "Chemistry Notes", user: "Priya Sharma", type: "Borrowed", status: "Active", karma: "N/A" },
-  { id: 3, item: "Graphic Calculator", user: "Amit Singh", type: "Lent", status: "Returned", karma: "+4" },
-  { id: 4, item: "USB-C Cable", user: "Sunita Devi", type: "Borrowed", status: "Due", karma: "N/A" },
-];
-
-const availableItems = placeholderImages.slice(0, 4);
+const transactions: any[] = [];
+const availableItems: any[] = [];
 
 export default function Dashboard() {
   const user = useUser();
@@ -94,32 +87,39 @@ export default function Dashboard() {
             <CardDescription>An overview of your recent rental activity.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="hidden sm:table-cell">User</TableHead>
-                  <TableHead className="hidden md:table-cell">Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Karma</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map(tx => (
-                  <TableRow key={tx.id}>
-                    <TableCell className="font-medium">{tx.item}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{tx.user}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                        <Badge variant={tx.type === 'Lent' ? 'secondary' : 'outline'}>{tx.type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{tx.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>
+            {transactions.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead className="hidden sm:table-cell">User</TableHead>
+                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Karma</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map(tx => (
+                    <TableRow key={tx.id}>
+                      <TableCell className="font-medium">{tx.item}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{tx.user}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                          <Badge variant={tx.type === 'Lent' ? 'secondary' : 'outline'}>{tx.type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{tx.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+                <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
+                    <FileX className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No recent transactions.</p>
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -138,23 +138,32 @@ export default function Dashboard() {
               </Link>
             </Button>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-             {availableItems.map((item) => (
-              <div key={item.id} className="group relative">
-                <Image
-                  alt={item.description}
-                  className="rounded-lg object-cover w-full aspect-square transition-transform group-hover:scale-105"
-                  height="200"
-                  src={item.imageUrl}
-                  width="200"
-                  data-ai-hint={item.imageHint}
-                />
-                <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-black/50 p-2 text-white">
-                  <h3 className="text-sm font-semibold">{item.description}</h3>
-                  <p className="text-xs">10 Karma</p>
+           <CardContent>
+            {availableItems.length > 0 ? (
+                <div className="grid grid-cols-2 gap-4">
+                    {availableItems.map((item) => (
+                    <div key={item.id} className="group relative">
+                        <Image
+                        alt={item.description}
+                        className="rounded-lg object-cover w-full aspect-square transition-transform group-hover:scale-105"
+                        height="200"
+                        src={item.imageUrl}
+                        width="200"
+                        data-ai-hint={item.imageHint}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-black/50 p-2 text-white">
+                        <h3 className="text-sm font-semibold">{item.description}</h3>
+                        <p className="text-xs">10 Karma</p>
+                        </div>
+                    </div>
+                    ))}
                 </div>
-              </div>
-            ))}
+            ) : (
+                 <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
+                    <FileX className="h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">No items available nearby.</p>
+                </div>
+            )}
           </CardContent>
         </Card>
       </div>

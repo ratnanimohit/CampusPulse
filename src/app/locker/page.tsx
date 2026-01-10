@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import Image from 'next/image';
-import { placeholderImages as defaultItems } from '@/lib/placeholder-images.json';
 import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
 
@@ -17,10 +16,8 @@ export type Item = {
     karma: number;
 };
 
-const initialItems = defaultItems.map(item => ({ ...item, karma: 10 }));
-
 export default function LockerPage() {
-    const [userItems, setUserItems] = useState<Item[]>(initialItems);
+    const [userItems, setUserItems] = useState<Item[]>([]);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
 
