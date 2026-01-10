@@ -14,10 +14,13 @@ export type Item = {
     description: string;
     imageUrl: string;
     imageHint: string;
+    karma: number;
 };
 
+const initialItems = defaultItems.map(item => ({ ...item, karma: 10 }));
+
 export default function LockerPage() {
-    const [userItems, setUserItems] = useState<Item[]>(defaultItems);
+    const [userItems, setUserItems] = useState<Item[]>(initialItems);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
 
@@ -26,7 +29,8 @@ export default function LockerPage() {
             id: `item-${Date.now()}`,
             description: newItem.itemName,
             imageUrl: newItem.photoDataUri || 'https://picsum.photos/seed/placeholder/320/180',
-            imageHint: 'new item'
+            imageHint: 'new item',
+            karma: newItem.karma || 10,
         }
         setUserItems(prevItems => [item, ...prevItems]);
     };
@@ -34,7 +38,7 @@ export default function LockerPage() {
     const handleItemUpdated = (updatedItem: EditedItem) => {
         setUserItems(prevItems => 
             prevItems.map(item => 
-                item.id === updatedItem.id ? { ...item, description: updatedItem.itemName } : item
+                item.id === updatedItem.id ? { ...item, description: updatedItem.itemName, karma: updatedItem.karma } : item
             )
         );
         setEditingItem(null);
@@ -79,7 +83,7 @@ export default function LockerPage() {
                             </CardHeader>
                             <CardContent className="p-4">
                                 <CardTitle className="text-lg font-headline">{item.description}</CardTitle>
-                                <CardDescription>10 Karma / day</CardDescription>
+                                <CardDescription>{item.karma} Karma</CardDescription>
                             </CardContent>
                             <CardFooter className="p-4 pt-0">
                                 <Button size="sm" variant="outline" className="w-full" onClick={() => setEditingItem(item)}>Edit</Button>

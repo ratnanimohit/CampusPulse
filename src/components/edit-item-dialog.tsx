@@ -28,6 +28,7 @@ import type { Item } from '@/app/locker/page';
 const editItemSchema = z.object({
   id: z.string(),
   itemName: z.string().min(1, 'Item name is required.'),
+  karma: z.coerce.number().min(0, 'Karma points must be a positive number.'),
 });
 
 export type EditedItem = z.infer<typeof editItemSchema>;
@@ -47,6 +48,7 @@ export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: Ed
     defaultValues: {
         id: item.id,
         itemName: item.description,
+        karma: item.karma,
     },
   });
 
@@ -55,6 +57,7 @@ export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: Ed
         form.reset({
             id: item.id,
             itemName: item.description,
+            karma: item.karma,
         });
     }
   }, [item, form])
@@ -88,6 +91,24 @@ export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: Ed
                   <FormControl>
                     <Input
                       placeholder="e.g., Electric Iron"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="karma"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Karma Points</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 10"
                       {...field}
                     />
                   </FormControl>

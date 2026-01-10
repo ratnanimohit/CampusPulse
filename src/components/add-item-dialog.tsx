@@ -31,6 +31,7 @@ const addItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
   itemType: z.string().optional(),
   photoDataUri: z.string().optional(),
+  karma: z.coerce.number().min(0, 'Karma points must be a positive number.').default(10),
 });
 
 type AddItemFormValues = z.infer<typeof addItemSchema>;
@@ -54,6 +55,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onItemAdded }: AddItemDial
       itemName: '',
       itemType: '',
       photoDataUri: '',
+      karma: 10,
     },
   });
   
@@ -147,7 +149,7 @@ export function AddItemDialog({ isOpen, onOpenChange, onItemAdded }: AddItemDial
                     <Image
                       src={imagePreview}
                       alt="Item preview"
-                      layout="fill"
+                      fill
                       objectFit="contain"
                       className="rounded-lg"
                     />
@@ -171,6 +173,25 @@ export function AddItemDialog({ isOpen, onOpenChange, onItemAdded }: AddItemDial
                   <FormControl>
                     <Input
                       placeholder="e.g., Electric Iron"
+                      {...field}
+                      disabled={isIdentifying}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="karma"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Karma Points</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="e.g., 10"
                       {...field}
                       disabled={isIdentifying}
                     />

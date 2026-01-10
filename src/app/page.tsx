@@ -115,8 +115,7 @@ export default function Dashboard() {
                     <TableCell>
                       <Badge variant="outline">{tx.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>
-                  </TableRow>
+                    <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>                  </TableRow>
                 ))}
               </TableBody>
             </Table>
@@ -151,7 +150,7 @@ export default function Dashboard() {
                 />
                 <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-black/50 p-2 text-white">
                   <h3 className="text-sm font-semibold">{item.description}</h3>
-                  <p className="text-xs">10 Karma / day</p>
+                  <p className="text-xs">10 Karma</p>
                 </div>
               </div>
             ))}
