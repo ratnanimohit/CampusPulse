@@ -5,21 +5,39 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle } from "lucide-react";
 import Image from 'next/image';
-import { placeholderImages } from '@/lib/placeholder-images.json';
+import { placeholderImages as defaultItems } from '@/lib/placeholder-images.json';
 import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
+import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
+
+export type Item = {
+    id: string;
+    description: string;
+    imageUrl: string;
+    imageHint: string;
+};
 
 export default function LockerPage() {
-    const [userItems, setUserItems] = useState(placeholderImages);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [userItems, setUserItems] = useState<Item[]>(defaultItems);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<Item | null>(null);
 
     const handleItemAdded = (newItem: NewItem) => {
-        const item = {
+        const item: Item = {
             id: `item-${Date.now()}`,
             description: newItem.itemName,
             imageUrl: newItem.photoDataUri || 'https://picsum.photos/seed/placeholder/320/180',
             imageHint: 'new item'
         }
         setUserItems(prevItems => [item, ...prevItems]);
+    };
+
+    const handleItemUpdated = (updatedItem: EditedItem) => {
+        setUserItems(prevItems => 
+            prevItems.map(item => 
+                item.id === updatedItem.id ? { ...item, description: updatedItem.itemName } : item
+            )
+        );
+        setEditingItem(null);
     };
 
     return (
@@ -29,13 +47,21 @@ export default function LockerPage() {
                     <h1 className="text-3xl font-bold font-headline">My Locker</h1>
                     <p className="text-muted-foreground">Items you have listed for rent.</p>
                 </div>
-                <Button onClick={() => setIsDialogOpen(true)}>
+                <Button onClick={() => setIsAddDialogOpen(true)}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add New Item
                 </Button>
             </div>
 
-            <AddItemDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} onItemAdded={handleItemAdded} />
+            <AddItemDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onItemAdded={handleItemAdded} />
+            {editingItem && (
+                <EditItemDialog 
+                    isOpen={!!editingItem} 
+                    onOpenChange={(isOpen) => !isOpen && setEditingItem(null)} 
+                    onItemUpdated={handleItemUpdated}
+                    item={editingItem}
+                />
+            )}
 
             {userItems.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -56,7 +82,7 @@ export default function LockerPage() {
                                 <CardDescription>10 Karma / day</CardDescription>
                             </CardContent>
                             <CardFooter className="p-4 pt-0">
-                                <Button size="sm" variant="outline" className="w-full">Edit</Button>
+                                <Button size="sm" variant="outline" className="w-full" onClick={() => setEditingItem(item)}>Edit</Button>
                             </CardFooter>
                         </Card>
                     ))}
@@ -66,7 +92,7 @@ export default function LockerPage() {
                     <div className="flex flex-col items-center gap-1 text-center">
                         <h3 className="text-2xl font-bold tracking-tight font-headline">You have no items in your locker</h3>
                         <p className="text-sm text-muted-foreground">Get started by adding an item to rent out.</p>
-                        <Button className="mt-4" onClick={() => setIsDialogOpen(true)}>
+                        <Button className="mt-4" onClick={() => setIsAddDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Add Item
                         </Button>
