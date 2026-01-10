@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -14,19 +14,46 @@ export default function SettingsPage() {
     const user = useUser();
     const { toast } = useToast();
     
+    // State for user profile information
     const [name, setName] = useState(user?.displayName || '');
+    
+    // State for notification preferences
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(false);
 
+    // Load settings from localStorage on initial render
+    useEffect(() => {
+        const savedSettings = localStorage.getItem('userSettings');
+        if (savedSettings) {
+            const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
+            if (name) setName(name);
+            if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
+            if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
+        }
+    }, []);
+
+    // Save settings to localStorage whenever they change
+    useEffect(() => {
+        const settings = { name, emailNotifications, pushNotifications };
+        localStorage.setItem('userSettings', JSON.stringify(settings));
+    }, [name, emailNotifications, pushNotifications]);
+
+    // Update name state when user object changes
+    useEffect(() => {
+        if (user?.displayName) {
+            const savedSettings = localStorage.getItem('userSettings');
+            if (!savedSettings || !JSON.parse(savedSettings).name) {
+                setName(user.displayName);
+            }
+        }
+    }, [user]);
+
     const handleSaveChanges = () => {
-        // In a real app, you'd save these to a backend.
-        // For now, we just show a toast.
         toast({
             title: "Settings Saved",
             description: "Your changes have been saved successfully.",
         });
     };
-
 
     return (
         <div className="flex flex-col gap-8">
