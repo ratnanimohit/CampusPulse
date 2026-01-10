@@ -40,7 +40,7 @@ type ItemRequest = {
 const transactions: any[] = [];
 
 export default function Dashboard() {
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const firestore = useFirestore();
   const [userName, setUserName] = useState('');
   const { toast } = useToast();

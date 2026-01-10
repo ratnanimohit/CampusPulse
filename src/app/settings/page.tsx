@@ -11,7 +11,7 @@ import { useUser } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
-    const user = useUser();
+    const { user } = useUser();
     const { toast } = useToast();
     
     // State for user profile information
@@ -30,15 +30,16 @@ export default function SettingsPage() {
     useEffect(() => {
         if (isClient) {
             const savedSettings = localStorage.getItem('userSettings');
+            const defaultName = user?.displayName || '';
             if (savedSettings) {
-                const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
-                if (name) {
-                    setName(name);
-                } else if (user?.displayName) {
-                    setName(user.displayName);
+                try {
+                    const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
+                    setName(name || defaultName);
+                    if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
+                    if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
+                } catch (e) {
+                    setName(defaultName);
                 }
-                if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
-                if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
             } else if (user?.displayName) {
                 setName(user.displayName);
             }
