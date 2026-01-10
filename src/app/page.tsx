@@ -50,22 +50,29 @@ export default function Dashboard() {
     [firestore]
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    const savedSettings = localStorage.getItem('userSettings');
-    const defaultName = user?.displayName || 'Student';
+    setIsClient(true);
+  }, []);
 
-    if (savedSettings) {
-      try {
-        const { name } = JSON.parse(savedSettings);
-        setUserName(name || defaultName);
-      } catch (e) {
+  useEffect(() => {
+    if (isClient) {
+      const savedSettings = localStorage.getItem('userSettings');
+      const defaultName = user?.displayName || 'Student';
+
+      if (savedSettings) {
+        try {
+          const { name } = JSON.parse(savedSettings);
+          setUserName(name || defaultName);
+        } catch (e) {
+          setUserName(defaultName);
+        }
+      } else {
         setUserName(defaultName);
       }
-    } else {
-      setUserName(defaultName);
     }
-  }, [user]);
+  }, [user, isClient]);
 
   const fulfillRequest = (requestId: string) => {
     if (!firestore) return;
@@ -76,6 +83,10 @@ export default function Dashboard() {
       description: 'Thank you for helping a member of your community!',
     });
   };
+  
+  if (!isClient) {
+    return null; // Or a loading spinner
+  }
 
   return (
     <div className="flex flex-col gap-8">
