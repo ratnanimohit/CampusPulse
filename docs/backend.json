@@ -125,15 +125,14 @@
         },
         "handshakeCode": {
           "type": "string",
-          "description": "A 6-digit code used to verify the start of the rental."
+          "description": "A 6-digit code used to verify the start or end of the rental."
         }
       },
       "required": [
         "id",
         "lenderId",
         "borrowerId",
-        "itemId",
-        "startTime"
+        "itemId"
       ]
     },
     "ItemRequest": {

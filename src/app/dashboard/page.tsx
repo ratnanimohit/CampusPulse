@@ -27,10 +27,8 @@ import {
   query,
   where,
   doc,
-  serverTimestamp,
   addDoc,
 } from 'firebase/firestore';
-import type { Item } from '@/ai/flows/semantic-item-match';
 import { useRouter } from 'next/navigation';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -52,12 +50,13 @@ export default function Dashboard() {
   const router = useRouter();
 
   const requestsQuery = useMemoFirebase(
-    () => firestore && query(collection(firestore, 'itemRequests'), where('requesterId', '!=', user?.uid || '')),
-    [firestore, user]
+    () => firestore && query(collection(firestore, 'itemRequests')),
+    [firestore]
   );
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
-  const [isClient, setIsClient] = useState(false);
 
+  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+
+  const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -83,39 +82,39 @@ export default function Dashboard() {
   const fulfillRequest = async (request: ItemRequest) => {
     if (!firestore || !user) return;
     setIsFulfilling(request.id);
-
+  
     try {
       // 1. Generate a 6-digit handshake code
       const handshakeCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-      // 2. Create a new transaction with the handshake code
+  
+      // 2. Create a new transaction
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
-        itemId: "temp-item-id", // This should be determined by item selection
+        itemId: request.id, // Using request ID as a stand-in for a real item ID
         itemName: request.itemName,
         itemImageUrl: `https://picsum.photos/seed/${request.itemName}/320/180`,
-        karma: 10, // This should come from the item
-        startTime: serverTimestamp(),
+        karma: 10, // Default karma
         status: 'pending-handshake', // Initial status for code verification
         handshakeCode: handshakeCode,
       };
-
+  
       const transactionsCol = collection(firestore, 'transactions');
+      // Use await here to get the doc reference for navigation
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
-
-      // 3. Delete the original item request
+  
+      // 3. Delete the original item request non-blockingly
       const requestDocRef = doc(firestore, 'itemRequests', request.id);
       deleteDocumentNonBlocking(requestDocRef);
-
+  
       toast({
         title: 'Request Fulfilled!',
-        description: `A transaction has been created for "${request.itemName}".`,
+        description: `A transaction for "${request.itemName}" is pending. Go to the handshake page.`,
       });
-
+  
       // 4. Navigate to the transaction page to display the code
       router.push(`/transaction/${transactionDocRef.id}`);
-
+  
     } catch (error) {
       console.error("Error fulfilling request: ", error);
       toast({
@@ -124,10 +123,10 @@ export default function Dashboard() {
         description: 'Could not complete the fulfillment process.',
       });
     } finally {
-        setIsFulfilling(null);
+      setIsFulfilling(null);
     }
   };
-  
+
   if (!isClient) {
     return null; // Or a loading spinner
   }
@@ -386,5 +385,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
