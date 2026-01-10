@@ -115,7 +115,8 @@ export default function Dashboard() {
                     <TableCell>
                       <Badge variant="outline">{tx.status}</Badge>
                     </TableCell>
-                    <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>                  </TableRow>
+                    <TableCell className="text-right text-green-600 font-medium">{tx.karma}</TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
