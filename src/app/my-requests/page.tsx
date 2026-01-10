@@ -17,16 +17,39 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAtom } from 'jotai';
-import { requestsAtom, type Request } from '@/lib/requests-store';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { FileX } from 'lucide-react';
 
+export type ItemRequest = {
+  id: string;
+  itemName: string;
+  urgency: 'emergency' | 'medium' | 'normal';
+  requiredBy: string;
+  requesterId: string;
+};
+
 export default function MyRequestsPage() {
-  const [requests, setRequests] = useAtom(requestsAtom);
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const requestsQuery = useMemoFirebase(
+    () =>
+      user && firestore
+        ? query(collection(firestore, 'itemRequests'), where('requesterId', '==', user.uid))
+        : null,
+    [user, firestore]
+  );
+  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
   const cancelRequest = (id: string) => {
-    setRequests(prev => prev.filter(req => req.id !== id));
+    if (!firestore) return;
+    const requestDocRef = doc(firestore, 'itemRequests', id);
+    deleteDocumentNonBlocking(requestDocRef);
   };
+  
+  const isLoading = isUserLoading || isLoadingRequests;
 
   return (
     <Card>
@@ -37,7 +60,9 @@ export default function MyRequestsPage() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {requests.length > 0 ? (
+        {isLoading ? (
+          <p>Loading your requests...</p>
+        ) : requests && requests.length > 0 ? (
           <Table>
             <TableHeader>
               <TableRow>
@@ -61,7 +86,8 @@ export default function MyRequestsPage() {
                           : 'outline'
                       }
                     >
-                      {req.urgency.charAt(0).toUpperCase() + req.urgency.slice(1)}
+                      {req.urgency.charAt(0).toUpperCase() +
+                        req.urgency.slice(1)}
                     </Badge>
                   </TableCell>
                   <TableCell>

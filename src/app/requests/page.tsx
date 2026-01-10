@@ -30,9 +30,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAtom } from 'jotai';
-import { requestsAtom, type Request } from '@/lib/requests-store';
 import { useRouter } from 'next/navigation';
+import { useUser, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -45,8 +46,9 @@ type RequestFormValues = z.infer<typeof requestFormSchema>;
 
 export default function RequestsPage() {
   const { toast } = useToast();
-  const [requests, setRequests] = useAtom(requestsAtom);
   const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
@@ -59,11 +61,21 @@ export default function RequestsPage() {
   });
 
   function onSubmit(data: RequestFormValues) {
-    const newRequest: Request = {
-      id: `req-${Date.now()}`,
+    if (!user || !firestore) {
+        toast({
+            variant: "destructive",
+            title: "Authentication Error",
+            description: "You must be logged in to create a request.",
+        });
+        return;
+    }
+
+    const newRequest = {
       ...data,
+      requesterId: user.uid,
     };
-    setRequests(prev => [newRequest, ...prev]);
+    
+    addDocumentNonBlocking(collection(firestore, 'itemRequests'), newRequest);
 
     toast({
       title: 'Request Submitted!',
@@ -161,7 +173,7 @@ export default function RequestsPage() {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit">Submit Request</Button>
+            <Button type="submit" disabled={!user}>Submit Request</Button>
           </CardFooter>
         </Card>
       </form>
