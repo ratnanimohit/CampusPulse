@@ -28,8 +28,14 @@ import {
   where,
   doc,
   deleteDoc,
+  getDocs,
+  limit,
+  addDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import type { Item } from '@/app/locker/page';
+import { useRouter } from 'next/navigation';
 
 type ItemRequest = {
   id: string;
@@ -45,6 +51,7 @@ export default function Dashboard() {
   const firestore = useFirestore();
   const [userName, setUserName] = useState('');
   const { toast } = useToast();
+  const router = useRouter();
 
   const requestsQuery = useMemoFirebase(
     () => firestore && collection(firestore, 'itemRequests'),
@@ -75,14 +82,68 @@ export default function Dashboard() {
     }
   }, [user, isClient]);
 
-  const fulfillRequest = (requestId: string) => {
-    if (!firestore) return;
-    const requestDocRef = doc(firestore, 'itemRequests', requestId);
-    deleteDocumentNonBlocking(requestDocRef);
-    toast({
-      title: 'Request Fulfilled!',
-      description: 'Thank you for helping a member of your community!',
-    });
+ const fulfillRequest = async (request: ItemRequest) => {
+    if (!firestore || !user) return;
+
+    try {
+      // 1. Find an available item from the lender's locker
+      const itemsQuery = query(
+        collection(firestore, 'itemListings'),
+        where('ownerId', '==', user.uid),
+        where('name', '==', request.itemName),
+        where('available', '==', true),
+        limit(1)
+      );
+      const itemSnapshot = await getDocs(itemsQuery);
+
+      if (itemSnapshot.empty) {
+        toast({
+          variant: 'destructive',
+          title: 'No available item',
+          description: `You don't have an available "${request.itemName}" in your locker.`,
+        });
+        return;
+      }
+      
+      const itemDoc = itemSnapshot.docs[0];
+      const item = { id: itemDoc.id, ...itemDoc.data() } as Item;
+
+      // 2. Create a new transaction
+      const transactionData = {
+        lenderId: user.uid,
+        borrowerId: request.requesterId,
+        itemId: item.id,
+        itemName: item.name,
+        itemImageUrl: item.imageUrl,
+        karma: item.karma,
+        startTime: serverTimestamp(),
+        status: 'pending-start', // Lender has fulfilled, waiting for borrower to scan
+        qrCodeStart: `${user.uid}-${request.requesterId}-${item.id}-${Date.now()}` // Unique QR content
+      };
+
+      const transactionsCol = collection(firestore, 'transactions');
+      const transactionDocRef = await addDoc(transactionsCol, transactionData);
+
+      // 3. Delete the original item request
+      const requestDocRef = doc(firestore, 'itemRequests', request.id);
+      await deleteDoc(requestDocRef);
+
+      toast({
+        title: 'Request Fulfilled!',
+        description: 'A transaction has been created. Show the QR code to the borrower.',
+      });
+
+      // 4. Navigate to the transaction page
+      router.push(`/transaction/${transactionDocRef.id}`);
+
+    } catch (error) {
+      console.error("Error fulfilling request: ", error);
+      toast({
+        variant: 'destructive',
+        title: 'Fulfillment Failed',
+        description: 'Could not complete the fulfillment process.',
+      });
+    }
   };
   
   if (!isClient) {
@@ -316,7 +377,7 @@ export default function Dashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => fulfillRequest(req.id)}
+                          onClick={() => fulfillRequest(req)}
                           disabled={user?.uid === req.requesterId}
                         >
                           Fulfill
@@ -340,3 +401,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    

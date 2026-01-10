@@ -132,8 +132,7 @@
         "lenderId",
         "borrowerId",
         "itemId",
-        "startTime",
-        "endTime"
+        "startTime"
       ]
     },
     "ItemRequest": {
@@ -234,3 +233,5 @@
     "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. User profiles and item listings are stored in separate collections to optimize querying. Item requests are handled in a separate collection as well. Transactions are stored in a dedicated collection. To ensure authorization independence, the `ownerId` is stored within each `ItemListing` document, allowing rules to validate ownership without complex `get()` calls. Similarly, `requesterId` is stored in `ItemRequest`. Each `Transaction` stores `lenderId`, `borrowerId`, and `itemId` for similar reasons.\n\nThe structure also facilitates secure list operations. By segregating data into collections based on entity type (users, items, requests, transactions), rules can be applied to entire collections rather than relying on document-level filtering. Using the dedicated collections approach alongside path-based ownership for private data and existence-over-content for global roles allows us to achieve Authorization Independence, DBAC, and support QAPs, thereby supporting secure list operations."
   }
 }
+
+    
