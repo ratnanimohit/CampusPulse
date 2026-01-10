@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, collection, addDoc } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react';
+import { KeyRound, ArrowLeft, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -59,16 +59,24 @@ export default function TransactionPage() {
 
     setIsVerifying(true);
     if (enteredCode === transaction.handshakeCode) {
-      await updateDoc(transactionDocRef, {
-        status: 'active',
-        startTime: serverTimestamp(),
-        handshakeCode: '', // Clear the code after use
-      });
+      try {
+        await updateDoc(transactionDocRef, {
+            status: 'active',
+            startTime: serverTimestamp(),
+            handshakeCode: '', // Clear the code after use
+        });
 
-      toast({
-        title: 'Rental Started!',
-        description: `You are now borrowing ${transaction.itemName}.`,
-      });
+        toast({
+            title: 'Rental Started!',
+            description: `You are now borrowing ${transaction.itemName}.`,
+        });
+      } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Update Failed',
+            description: 'Could not start the rental. Please try again.',
+        });
+      }
     } else {
       toast({
         variant: 'destructive',
@@ -84,15 +92,23 @@ export default function TransactionPage() {
     
     const endCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await updateDoc(transactionDocRef, {
-      status: 'pending-end',
-      handshakeCode: endCode,
-    });
-    
-     toast({
-        title: 'Ready to Return',
-        description: 'Show the new code to the lender to complete the return.',
-      });
+    try {
+        await updateDoc(transactionDocRef, {
+            status: 'pending-end',
+            handshakeCode: endCode,
+        });
+        
+         toast({
+            title: 'Ready to Return',
+            description: 'Show the new code to the lender to complete the return.',
+          });
+    } catch(error) {
+         toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not initiate the return process.',
+          });
+    }
   }
 
   const handleConfirmReturn = async () => {
@@ -100,16 +116,24 @@ export default function TransactionPage() {
 
     setIsVerifying(true);
      if (enteredCode === transaction.handshakeCode) {
-      await updateDoc(transactionDocRef, {
-          status: 'completed',
-          actualEndTime: serverTimestamp(),
-          handshakeCode: '',
-      });
-      
-      toast({
-          title: 'Rental Completed!',
-          description: `The item has been successfully returned.`,
-      });
+        try {
+            await updateDoc(transactionDocRef, {
+                status: 'completed',
+                actualEndTime: serverTimestamp(),
+                handshakeCode: '',
+            });
+            
+            toast({
+                title: 'Rental Completed!',
+                description: `The item has been successfully returned.`,
+            });
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Update Failed',
+                description: 'Could not complete the return. Please try again.',
+            });
+        }
     } else {
        toast({
         variant: 'destructive',
@@ -164,101 +188,6 @@ export default function TransactionPage() {
     }
   };
 
-  const renderLenderView = () => {
-    switch (transaction.status) {
-      case 'pending-handshake':
-        return (
-          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-            <p className="text-sm text-muted-foreground">Verification Code</p>
-            <p className="text-4xl font-bold tracking-widest text-primary">
-              {transaction.handshakeCode}
-            </p>
-          </div>
-        );
-      case 'pending-end':
-        return (
-          <div className="w-full space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="text-muted-foreground" />
-              <Input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={enteredCode}
-                onChange={e => setEnteredCode(e.target.value)}
-                className="text-center text-lg tracking-widest"
-                disabled={isVerifying}
-              />
-            </div>
-            <Button 
-              onClick={handleConfirmReturn} 
-              className="w-full" 
-              disabled={isVerifying || enteredCode.length !== 6}
-            >
-              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Return
-            </Button>
-          </div>
-        );
-      case 'active':
-        return <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>;
-      case 'completed':
-        return <p className="text-muted-foreground text-center">This transaction is complete.</p>;
-      default:
-        return null;
-    }
-  };
-
-  const renderBorrowerView = () => {
-    switch (transaction.status) {
-      case 'pending-handshake':
-        return (
-          <div className="w-full space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="text-muted-foreground" />
-              <Input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={enteredCode}
-                onChange={e => setEnteredCode(e.target.value)}
-                className="text-center text-lg tracking-widest"
-                disabled={isVerifying}
-              />
-            </div>
-            <Button 
-              onClick={handleVerifyCode} 
-              className="w-full" 
-              disabled={isVerifying || enteredCode.length !== 6}
-            >
-              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Start Rental
-            </Button>
-          </div>
-        );
-      case 'active':
-        return (
-          <Button onClick={handleEndRental} variant="outline" className="w-full">
-            End Rental & Generate Return Code
-          </Button>
-        );
-      case 'pending-end':
-        return (
-          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-            <p className="text-sm text-muted-foreground">Return Code</p>
-            <p className="text-4xl font-bold tracking-widest text-primary">
-              {transaction.handshakeCode}
-            </p>
-          </div>
-        );
-      case 'completed':
-        return <p className="text-muted-foreground text-center">This transaction is complete.</p>;
-      default:
-        return null;
-    }
-  };
-
-
   return (
     <div className="flex flex-col gap-4 items-center">
       <Card className="w-full max-w-md">
@@ -289,15 +218,99 @@ export default function TransactionPage() {
           <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
 
           <div className="w-full space-y-4">
-            {isLender && renderLenderView()}
-            {isBorrower && renderBorrowerView()}
+             {/* LENDER'S VIEW */}
+            {isLender && (
+                <>
+                    {transaction.status === 'pending-handshake' && (
+                         <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                            <p className="text-sm text-muted-foreground">Verification Code</p>
+                            <p className="text-4xl font-bold tracking-widest text-primary">
+                            {transaction.handshakeCode}
+                            </p>
+                        </div>
+                    )}
+                    {transaction.status === 'pending-end' && (
+                        <div className="w-full space-y-4">
+                            <div className="flex items-center gap-2">
+                            <KeyRound className="text-muted-foreground" />
+                            <Input
+                                type="text"
+                                maxLength={6}
+                                placeholder="Enter 6-digit code"
+                                value={enteredCode}
+                                onChange={e => setEnteredCode(e.target.value)}
+                                className="text-center text-lg tracking-widest"
+                                disabled={isVerifying}
+                            />
+                            </div>
+                            <Button 
+                            onClick={handleConfirmReturn} 
+                            className="w-full" 
+                            disabled={isVerifying || enteredCode.length !== 6}
+                            >
+                            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Return
+                            </Button>
+                        </div>
+                    )}
+                    {transaction.status === 'active' && (
+                        <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>
+                    )}
+                </>
+            )}
+
+            {/* BORROWER'S VIEW */}
+            {isBorrower && (
+                 <>
+                    {transaction.status === 'pending-handshake' && (
+                        <div className="w-full space-y-4">
+                            <div className="flex items-center gap-2">
+                                <KeyRound className="text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    maxLength={6}
+                                    placeholder="Enter 6-digit code"
+                                    value={enteredCode}
+                                    onChange={e => setEnteredCode(e.target.value)}
+                                    className="text-center text-lg tracking-widest"
+                                    disabled={isVerifying}
+                                />
+                            </div>
+                            <Button 
+                                onClick={handleVerifyCode} 
+                                className="w-full" 
+                                disabled={isVerifying || enteredCode.length !== 6}
+                            >
+                                {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Start Rental
+                            </Button>
+                        </div>
+                    )}
+                    {transaction.status === 'active' && (
+                         <Button onClick={handleEndRental} variant="outline" className="w-full">
+                            End Rental & Generate Return Code
+                        </Button>
+                    )}
+                    {transaction.status === 'pending-end' && (
+                         <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                            <p className="text-sm text-muted-foreground">Return Code</p>
+                            <p className="text-4xl font-bold tracking-widest text-primary">
+                            {transaction.handshakeCode}
+                            </p>
+                        </div>
+                    )}
+                 </>
+            )}
+            
+            {transaction.status === 'completed' && (
+                <div className="text-center space-y-4">
+                     <p className="text-muted-foreground text-center">This transaction is complete.</p>
+                     <Button asChild variant="outline" className="mt-4">
+                        <Link href="/dashboard">Back to Dashboard</Link>
+                    </Button>
+                </div>
+            )}
           </div>
-          
-          {transaction.status === 'completed' && (
-             <Button asChild variant="outline" className="mt-4">
-                <Link href="/dashboard">Back to Dashboard</Link>
-            </Button>
-          )}
 
         </CardContent>
       </Card>
