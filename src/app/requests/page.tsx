@@ -87,7 +87,7 @@ export default function RequestsPage() {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} suppressHydrationWarning>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
             <CardTitle className="font-headline text-2xl">
@@ -108,7 +108,6 @@ export default function RequestsPage() {
                     <Input
                       placeholder="e.g., Electric Iron, Graphic Calculator"
                       {...field}
-                      suppressHydrationWarning
                     />
                   </FormControl>
                   <FormMessage />
@@ -125,7 +124,6 @@ export default function RequestsPage() {
                     <Textarea
                       placeholder="Describe why you need this item..."
                       {...field}
-                      suppressHydrationWarning
                     />
                   </FormControl>
                   <FormMessage />
@@ -140,7 +138,7 @@ export default function RequestsPage() {
                   <FormLabel>Urgency Level</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <SelectTrigger suppressHydrationWarning>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select urgency" />
                       </SelectTrigger>
                     </FormControl>
@@ -167,7 +165,7 @@ export default function RequestsPage() {
                 <FormItem>
                   <FormLabel>Required By</FormLabel>
                   <FormControl>
-                    <Input type="datetime-local" {...field} suppressHydrationWarning />
+                    <Input type="datetime-local" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -175,7 +173,7 @@ export default function RequestsPage() {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={!user} suppressHydrationWarning>Submit Request</Button>
+            <Button type="submit" disabled={!user}>Submit Request</Button>
           </CardFooter>
         </Card>
       </form>
