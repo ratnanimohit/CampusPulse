@@ -1,0 +1,268 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile on the Campus Pulse app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address (must be @gla.ac.in for MVP).",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "User's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "User's last name."
+        },
+        "karmaPoints": {
+          "type": "number",
+          "description": "User's accumulated karma points."
+        },
+        "transactionCount": {
+          "type": "number",
+          "description": "Number of transactions the user has made today."
+        },
+        "lockerItemIds": {
+          "type": "array",
+          "description": "References to ItemListing. (Relationship: UserProfile 1:N ItemListing)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "firstName",
+        "lastName",
+        "karmaPoints",
+        "transactionCount"
+      ]
+    },
+    "ItemListing": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ItemListing",
+      "type": "object",
+      "description": "Represents an item listed for rent by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the item listing."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ItemListing)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the item."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the item."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the item's image.",
+          "format": "uri"
+        },
+        "price": {
+          "type": "number",
+          "description": "Rental price of the item."
+        },
+        "available": {
+          "type": "boolean",
+          "description": "Indicates if the item is currently available for rent."
+        }
+      },
+      "required": [
+        "id",
+        "ownerId",
+        "name",
+        "description",
+        "imageUrl",
+        "price",
+        "available"
+      ]
+    },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a rental transaction between two users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the transaction."
+        },
+        "lenderId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Transaction as Lender)"
+        },
+        "borrowerId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Transaction as Borrower)"
+        },
+        "itemId": {
+          "type": "string",
+          "description": "Reference to ItemListing. (Relationship: ItemListing 1:N Transaction)"
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Date and time when the rental started.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Date and time when the rental is expected to end.",
+          "format": "date-time"
+        },
+        "actualEndTime": {
+          "type": "string",
+          "description": "Date and time when the rental actually ended.",
+          "format": "date-time"
+        },
+        "rating": {
+          "type": "number",
+          "description": "Rating given by the borrower to the lender (0-5)."
+        },
+        "qrCodeStart": {
+          "type": "string",
+          "description": "QR Code generated when the transaction has started."
+        },
+        "qrCodeEnd": {
+          "type": "string",
+          "description": "QR Code generated when the transaction has finished."
+        }
+      },
+      "required": [
+        "id",
+        "lenderId",
+        "borrowerId",
+        "itemId",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "ItemRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ItemRequest",
+      "type": "object",
+      "description": "Represents a user's request for an item.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the item request."
+        },
+        "requesterId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ItemRequest)"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the requested item and reason for request."
+        },
+        "urgency": {
+          "type": "string",
+          "description": "Urgency level of the request (Emergency, Medium, Normal)."
+        },
+        "expectedAvailableTime": {
+          "type": "string",
+          "description": "The date and time the item is expected to be available.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "requesterId",
+        "description",
+        "urgency",
+        "expectedAvailableTime"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/userProfiles/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. Uses path-based ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/itemListings/{itemId}",
+        "definition": {
+          "entityName": "ItemListing",
+          "schema": {
+            "$ref": "#/backend/entities/ItemListing"
+          },
+          "description": "Stores item listings. Includes denormalized 'ownerId' for authorization independence.",
+          "params": [
+            {
+              "name": "itemId",
+              "description": "The unique identifier for the item listing."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores transaction details.",
+          "params": [
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for the transaction."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/itemRequests/{itemRequestId}",
+        "definition": {
+          "entityName": "ItemRequest",
+          "schema": {
+            "$ref": "#/backend/entities/ItemRequest"
+          },
+          "description": "Stores item requests.",
+          "params": [
+            {
+              "name": "itemRequestId",
+              "description": "The unique identifier for the item request."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. User profiles and item listings are stored in separate collections to optimize querying. Item requests are handled in a separate collection as well. Transactions are stored in a dedicated collection. To ensure authorization independence, the `ownerId` is stored within each `ItemListing` document, allowing rules to validate ownership without complex `get()` calls. Each `Transaction` stores `lenderId`, `borrowerId`, and `itemId` for similar reasons.\n\nThe structure also facilitates secure list operations. By segregating data into collections based on entity type (users, items, requests, transactions), rules can be applied to entire collections rather than relying on document-level filtering. Using the dedicated collections approach alongside path-based ownership for private data and existence-over-content for global roles allows us to achieve Authorization Independence, DBAC, and support QAPs, thereby supporting secure list operations."
+  }
+}
