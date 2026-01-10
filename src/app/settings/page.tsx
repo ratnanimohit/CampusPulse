@@ -20,33 +20,38 @@ export default function SettingsPage() {
     // State for notification preferences
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(false);
-    const [isLoaded, setIsLoaded] = useState(false);
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     // Load settings from localStorage on initial render
     useEffect(() => {
-        const savedSettings = localStorage.getItem('userSettings');
-        if (savedSettings) {
-            const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
-            if (name) {
-                setName(name);
+        if (isClient) {
+            const savedSettings = localStorage.getItem('userSettings');
+            if (savedSettings) {
+                const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
+                if (name) {
+                    setName(name);
+                } else if (user?.displayName) {
+                    setName(user.displayName);
+                }
+                if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
+                if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
             } else if (user?.displayName) {
                 setName(user.displayName);
             }
-            if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
-            if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
-        } else if (user?.displayName) {
-            setName(user.displayName);
         }
-        setIsLoaded(true);
-    }, [user]);
+    }, [user, isClient]);
 
     // Save settings to localStorage whenever they change
     useEffect(() => {
-        if (isLoaded) {
+        if (isClient) {
             const settings = { name, emailNotifications, pushNotifications };
             localStorage.setItem('userSettings', JSON.stringify(settings));
         }
-    }, [name, emailNotifications, pushNotifications, isLoaded]);
+    }, [name, emailNotifications, pushNotifications, isClient]);
 
     const handleSaveChanges = () => {
         toast({
@@ -55,7 +60,7 @@ export default function SettingsPage() {
         });
     };
 
-    if (!isLoaded) {
+    if (!isClient) {
         return <div>Loading...</div>; // Or a skeleton loader
     }
 
