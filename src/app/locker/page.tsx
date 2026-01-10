@@ -8,7 +8,7 @@ import Image from 'next/image';
 import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Item = {
@@ -40,7 +40,8 @@ export default function LockerPage() {
             ownerId: user.uid,
             available: true,
         };
-        addDocumentNonBlocking(collection(firestore, 'itemListings'), itemData);
+        const itemListingsCol = collection(firestore, 'itemListings');
+        addDocumentNonBlocking(itemListingsCol, itemData);
     };
 
     const handleItemUpdated = (updatedItem: EditedItem) => {
