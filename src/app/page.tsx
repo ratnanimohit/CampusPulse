@@ -9,17 +9,19 @@ import { PlusCircle, ArrowUpRight, FileX } from "lucide-react";
 import Link from 'next/link';
 import Image from 'next/image';
 import { useUser } from "@/firebase";
+import { useAtom } from 'jotai';
+import { requestsAtom } from '@/lib/requests-store';
 
 const transactions: any[] = [];
-const availableItems: any[] = [];
 
 export default function Dashboard() {
   const user = useUser();
   const [userName, setUserName] = useState('');
+  const [requests] = useAtom(requestsAtom);
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('userSettings');
-    const defaultName = user?.displayName?.split(' ')[0] || 'Student';
+    const defaultName = user?.displayName || 'Student';
 
     if (savedSettings) {
       try {
@@ -145,42 +147,56 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center">
              <div className="grid gap-2">
-              <CardTitle className="font-headline">Available Nearby</CardTitle>
+              <CardTitle className="font-headline">Community Requests</CardTitle>
               <CardDescription>
-                Items available for you to borrow from others.
+                Items being requested by others on campus.
               </CardDescription>
             </div>
             <Button asChild size="sm" className="ml-auto gap-1">
-              <Link href="/requests">
+              <Link href="/my-requests">
                 View All
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
             </Button>
           </CardHeader>
            <CardContent>
-            {availableItems.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4">
-                    {availableItems.map((item) => (
-                    <div key={item.id} className="group relative">
-                        <Image
-                        alt={item.description}
-                        className="rounded-lg object-cover w-full aspect-square transition-transform group-hover:scale-105"
-                        height="200"
-                        src={item.imageUrl}
-                        width="200"
-                        data-ai-hint={item.imageHint}
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-black/50 p-2 text-white">
-                        <h3 className="text-sm font-semibold">{item.description}</h3>
-                        <p className="text-xs">10 Karma</p>
-                        </div>
-                    </div>
-                    ))}
-                </div>
+            {requests.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Item</TableHead>
+                            <TableHead>Urgency</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {requests.slice(0, 3).map((req) => (
+                            <TableRow key={req.id}>
+                                <TableCell className="font-medium">{req.itemName}</TableCell>
+                                <TableCell>
+                                    <Badge
+                                      variant={
+                                        req.urgency === 'emergency'
+                                          ? 'destructive'
+                                          : req.urgency === 'medium'
+                                          ? 'secondary'
+                                          : 'outline'
+                                      }
+                                    >
+                                      {req.urgency.charAt(0).toUpperCase() + req.urgency.slice(1)}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Button size="sm" variant="outline">Fulfill</Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             ) : (
                  <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
                     <FileX className="h-8 w-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">No items available nearby.</p>
+                    <p className="text-sm text-muted-foreground">No active community requests.</p>
                 </div>
             )}
           </CardContent>
