@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { PlusCircle, ArrowUpRight, FileX } from "lucide-react";
+import { PlusCircle, FileX } from "lucide-react";
 import Link from 'next/link';
-import Image from 'next/image';
 import { useUser } from "@/firebase";
 import { useAtom } from 'jotai';
 import { requestsAtom } from '@/lib/requests-store';
+import { useToast } from "@/hooks/use-toast";
 
 const transactions: any[] = [];
 
 export default function Dashboard() {
   const user = useUser();
   const [userName, setUserName] = useState('');
-  const [requests] = useAtom(requestsAtom);
+  const [requests, setRequests] = useAtom(requestsAtom);
+  const { toast } = useToast();
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('userSettings');
@@ -35,6 +36,13 @@ export default function Dashboard() {
     }
   }, [user]);
 
+  const fulfillRequest = (requestId: string) => {
+    setRequests((prevRequests) => prevRequests.filter((req) => req.id !== requestId));
+    toast({
+      title: 'Request Fulfilled!',
+      description: 'Thank you for helping a member of your community!',
+    });
+  };
 
   return (
     <div className="flex flex-col gap-8">
@@ -181,7 +189,7 @@ export default function Dashboard() {
                                     </Badge>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                    <Button size="sm" variant="outline">Fulfill</Button>
+                                    <Button size="sm" variant="outline" onClick={() => fulfillRequest(req.id)}>Fulfill</Button>
                                 </TableCell>
                             </TableRow>
                         ))}
