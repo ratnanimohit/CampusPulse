@@ -33,9 +33,10 @@ import {
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore';
-import type { Item } from '@/app/locker/page';
+import type { Item } from '@/ai/flows/semantic-item-match';
 import { useRouter } from 'next/navigation';
 import { findBestItemMatch } from '@/ai/flows/semantic-item-match';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -95,8 +96,10 @@ export default function Dashboard() {
         where('available', '==', true)
       );
       const userItemsSnapshot = await getDocs(userItemsQuery);
+      
+      const availableItems = userItemsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Item);
 
-      if (userItemsSnapshot.empty) {
+      if (availableItems.length === 0) {
         toast({
           variant: 'destructive',
           title: 'No available items',
@@ -106,15 +109,13 @@ export default function Dashboard() {
         return;
       }
       
-      const availableItems = userItemsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Item);
-      
       // 2. Use AI to find the best semantic match
       const matchResult = await findBestItemMatch({
           requestedItemName: request.itemName,
-          availableItems: availableItems.map(item => ({ id: item.id, name: item.name })),
+          availableItems: availableItems,
       });
       
-      const matchedItem = availableItems.find(item => item.id === matchResult.matchedItemId);
+      const matchedItem = matchResult.matchedItem;
 
       if (!matchedItem) {
          toast({
@@ -143,7 +144,8 @@ export default function Dashboard() {
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
 
       // 4. Mark the item as unavailable
-      await updateDoc(doc(firestore, 'itemListings', matchedItem.id), {
+      const itemDocRef = doc(firestore, 'itemListings', matchedItem.id);
+      await updateDoc(itemDocRef, {
         available: false,
       });
 
