@@ -18,7 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, FileX } from 'lucide-react';
+import { PlusCircle, FileX, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +36,7 @@ import {
 } from 'firebase/firestore';
 import type { Item } from '@/app/locker/page';
 import { useRouter } from 'next/navigation';
+import { findBestItemMatch } from '@/ai/flows/semantic-item-match';
 
 type ItemRequest = {
   id: string;
@@ -50,6 +51,7 @@ export default function Dashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [userName, setUserName] = useState('');
+  const [isFulfilling, setIsFulfilling] = useState<string | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -84,61 +86,91 @@ export default function Dashboard() {
 
  const fulfillRequest = async (request: ItemRequest) => {
     if (!firestore || !user) return;
+    setIsFulfilling(request.id);
 
     try {
-      // 1. Find an available item from the lender's locker
-      const itemsQuery = query(
+      // 1. Find all available items from the lender's locker
+      const userItemsQuery = query(
         collection(firestore, 'itemListings'),
         where('ownerId', '==', user.uid),
-        where('name', '==', request.itemName),
-        where('available', '==', true),
-        limit(1)
+        where('available', '==', true)
       );
-      const itemSnapshot = await getDocs(itemsQuery);
+      const userItemsSnapshot = await getDocs(userItemsQuery);
 
-      if (itemSnapshot.empty) {
+      if (userItemsSnapshot.empty) {
         toast({
           variant: 'destructive',
-          title: 'No available item',
-          description: `You don't have an available "${request.itemName}" in your locker.`,
+          title: 'No available items',
+          description: `You don't have any available items in your locker to fulfill this request.`,
         });
+        setIsFulfilling(null);
         return;
       }
       
-      const itemDoc = itemSnapshot.docs[0];
-      const item = { id: itemDoc.id, ...itemDoc.data() } as Item;
+      const availableItems = userItemsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Item);
+      const availableItemNames = availableItems.map(item => item.name);
 
-      // 2. Create a new transaction
+      // 2. Use AI to find the best semantic match
+      const matchResult = await findBestItemMatch({
+          requestedItemName: request.itemName,
+          availableItemNames: availableItemNames,
+      });
+
+      if (!matchResult.matchedItemName) {
+         toast({
+          variant: 'destructive',
+          title: 'No suitable item found',
+          description: matchResult.reasoning || `We couldn't find a good match for "${request.itemName}" in your locker.`,
+        });
+        setIsFulfilling(null);
+        return;
+      }
+
+      const matchedItem = availableItems.find(item => item.name === matchResult.matchedItemName);
+
+      if (!matchedItem) {
+          // This should rarely happen if the AI is working correctly
+           toast({
+            variant: 'destructive',
+            title: 'Matching Error',
+            description: 'Could not find the matched item data.',
+          });
+          setIsFulfilling(null);
+          return;
+      }
+
+
+      // 3. Create a new transaction
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
-        itemId: item.id,
-        itemName: item.name,
-        itemImageUrl: item.imageUrl,
-        karma: item.karma,
+        itemId: matchedItem.id,
+        itemName: matchedItem.name,
+        itemImageUrl: matchedItem.imageUrl,
+        karma: matchedItem.karma,
         startTime: serverTimestamp(),
         status: 'pending-start', // Lender has fulfilled, waiting for borrower to scan
-        qrCodeStart: `${user.uid}-${request.requesterId}-${item.id}-${Date.now()}` // Unique QR content
+        qrCodeStart: `${user.uid}-${request.requesterId}-${matchedItem.id}-${Date.now()}` // Unique QR content
       };
 
       const transactionsCol = collection(firestore, 'transactions');
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
 
-      // 3. Mark the item as unavailable
-      await updateDoc(doc(firestore, 'itemListings', item.id), {
+      // 4. Mark the item as unavailable
+      await updateDoc(doc(firestore, 'itemListings', matchedItem.id), {
         available: false,
       });
 
-      // 4. Delete the original item request
+      // 5. Delete the original item request
       const requestDocRef = doc(firestore, 'itemRequests', request.id);
       await deleteDoc(requestDocRef);
 
       toast({
         title: 'Request Fulfilled!',
-        description: 'A transaction has been created. Show the QR code to the borrower.',
+        description: `Transaction created for "${matchedItem.name}". Show the QR code to the borrower.`,
       });
 
-      // 5. Navigate to the transaction page
+      // 6. Navigate to the transaction page
       router.push(`/transaction/${transactionDocRef.id}`);
 
     } catch (error) {
@@ -148,6 +180,8 @@ export default function Dashboard() {
         title: 'Fulfillment Failed',
         description: 'Could not complete the fulfillment process.',
       });
+    } finally {
+        setIsFulfilling(null);
     }
   };
   
@@ -385,8 +419,9 @@ export default function Dashboard() {
                           size="sm"
                           variant="outline"
                           onClick={() => fulfillRequest(req)}
-                          disabled={user?.uid === req.requesterId}
+                          disabled={user?.uid === req.requesterId || isFulfilling !== null}
                         >
+                           {isFulfilling === req.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Fulfill
                         </Button>
                       </TableCell>
