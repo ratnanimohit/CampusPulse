@@ -93,10 +93,11 @@ export default function Dashboard() {
         borrowerId: request.requesterId,
         itemId: request.id, // Using request ID as a stand-in for a real item ID
         itemName: request.itemName,
-        itemImageUrl: `https://picsum.photos/seed/${request.itemName}/320/180`,
+        itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
         karma: 10, // Default karma
         status: 'pending-handshake', // Initial status for code verification
         handshakeCode: handshakeCode,
+        createdAt: new Date().toISOString(),
       };
   
       const transactionsCol = collection(firestore, 'transactions');
@@ -385,5 +386,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
