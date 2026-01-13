@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
-import { doc, serverTimestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, writeBatch, runTransaction, increment } from 'firebase/firestore';
 import {
   Card,
   CardContent,
@@ -13,13 +13,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { KeyRound, ArrowLeft, Loader2, CheckCircle, ShieldCheck, Hourglass, Info } from 'lucide-react';
+import { KeyRound, ArrowLeft, Loader2, CheckCircle, Info, ShieldX } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
 
 type Transaction = {
   id: string;
@@ -29,9 +28,8 @@ type Transaction = {
   itemName: string;
   itemImageUrl: string;
   karma: number;
-  status: 'pending-handshake' | 'active' | 'pending-end' | 'completed';
-  handoverCode?: string;
-  returnCode?: string;
+  status: 'pending-handshake' | 'completed';
+  pin?: string;
   startTime?: any;
   actualEndTime?: any;
   originalRequestId?: string;
@@ -54,138 +52,102 @@ export default function TransactionPage() {
 
   const { data: transaction, isLoading } = useDoc<Transaction>(transactionDocRef);
 
-  const [enteredCode, setEnteredCode] = useState('');
+  const [pin, setPin] = useState(['', '', '', '']);
   const [isProcessing, setIsProcessing] = useState(false);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const isLender = user?.uid === transaction?.lenderId;
   const isBorrower = user?.uid === transaction?.borrowerId;
 
-  const handleAcceptRequest = async () => {
-    if (!transactionDocRef || !isLender) return;
-    setIsProcessing(true);
-    try {
-      const handoverCode = Math.floor(100000 + Math.random() * 900000).toString();
-      await updateDoc(transactionDocRef, {
-        status: 'active',
-        handoverCode: handoverCode,
-      });
-      toast({ title: 'Request Accepted', description: 'Share the code with the borrower.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not accept the request.' });
-    } finally {
-      setIsProcessing(false);
+  const handlePinChange = (index: number, value: string) => {
+    if (value.length > 1) return; // Only allow single digit
+    const newPin = [...pin];
+    newPin[index] = value;
+    setPin(newPin);
+    
+    // Focus next input
+    if (value && index < 3) {
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleVerifyHandover = async () => {
-    if (!transaction || !transactionDocRef || !isBorrower) return;
+  const handleVerifyPin = async () => {
+    if (!transaction || !transactionDocRef || !isBorrower || !firestore) return;
+    const enteredPin = pin.join('');
+    if (enteredPin.length !== 4) {
+      toast({ variant: 'destructive', title: 'Invalid PIN', description: 'Please enter all 4 digits.' });
+      return;
+    }
+    
     setIsProcessing(true);
-    if (enteredCode === transaction.handoverCode) {
+
+    if (enteredPin === transaction.pin) {
       try {
-        const batch = writeBatch(firestore);
-        
-        batch.update(transactionDocRef, { startTime: serverTimestamp() });
-        
-        if (transaction.originalRequestId) {
-          const requestDocRef = doc(firestore, 'itemRequests', transaction.originalRequestId);
-          batch.delete(requestDocRef);
-        }
+        await runTransaction(firestore, async (t) => {
+          const lenderProfileRef = doc(firestore, 'userProfiles', transaction.lenderId);
+          const borrowerProfileRef = doc(firestore, 'userProfiles', transaction.borrowerId);
+          const requestDocRef = doc(firestore, 'itemRequests', transaction.originalRequestId!);
 
-        await batch.commit();
+          t.update(transactionDocRef, {
+            status: 'completed',
+            actualEndTime: serverTimestamp(),
+            startTime: serverTimestamp(), // For simplicity, start and end are the same time
+          });
+          
+          t.update(lenderProfileRef, { karmaPoints: increment(transaction.karma || 10) });
+          t.update(borrowerProfileRef, { karmaPoints: increment(transaction.karma || 10) });
+          
+          t.delete(requestDocRef);
+        });
 
-        toast({ title: 'Rental Started!', description: `You are now borrowing ${transaction.itemName}.` });
+        toast({ title: 'Success!', description: 'Transaction completed.' });
       } catch (error) {
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not start the rental.' });
+        console.error("Transaction completion error:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the transaction.' });
       }
     } else {
-      toast({ variant: 'destructive', title: 'Incorrect Code', description: 'The code you entered is wrong.' });
+      toast({ variant: 'destructive', title: 'Invalid PIN', description: 'The PIN you entered is incorrect.' });
+      setPin(['', '', '', '']); // Reset PIN on failure
+      inputRefs.current[0]?.focus();
     }
-    setEnteredCode('');
     setIsProcessing(false);
   };
   
-  const handleRequestReturn = async () => {
-    if (!transactionDocRef || !isBorrower) return;
+  const handleCancelTransaction = async () => {
+    if (!transactionDocRef) return;
     setIsProcessing(true);
     try {
-      const returnCode = Math.floor(100000 + Math.random() * 900000).toString();
-      await updateDoc(transactionDocRef, {
-        status: 'pending-end',
-        returnCode: returnCode,
-      });
-      toast({ title: 'Return Requested', description: 'Share the new code with the lender.' });
-    } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not request the return.' });
+        await updateDoc(transactionDocRef, { status: 'cancelled' });
+        // Ideally, also update the original item listing to be available again
+        toast({ title: 'Transaction Cancelled' });
+        router.push('/dashboard');
+    } catch(e) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not cancel transaction.' });
     } finally {
-      setIsProcessing(false);
+        setIsProcessing(false);
     }
-  };
+  }
 
-  const handleVerifyReturn = async () => {
-    if (!transaction || !transactionDocRef || !isLender || !firestore) return;
-    setIsProcessing(true);
-    if (enteredCode === transaction.returnCode) {
-      try {
-        await updateDoc(transactionDocRef, {
-          status: 'completed',
-          actualEndTime: serverTimestamp(),
-        });
-        toast({ title: 'Rental Completed!', description: 'The item has been returned.' });
-        router.push('/history');
-      } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'Could not complete the return.' });
-      }
-    } else {
-      toast({ variant: 'destructive', title: 'Incorrect Code', description: 'The return code is incorrect.' });
-    }
-    setEnteredCode('');
-    setIsProcessing(false);
-  };
 
   const renderLenderView = () => {
     if (!transaction) return null;
     switch (transaction.status) {
       case 'pending-handshake':
         return (
-          <CardContent className="w-full text-center space-y-4">
-            <p className="text-muted-foreground">The borrower has been notified. Accept the request to generate the handover code.</p>
-            <Button onClick={handleAcceptRequest} disabled={isProcessing} className="w-full">
-              {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-              Accept Request
-            </Button>
-          </CardContent>
-        );
-      case 'active':
-        return (
           <CardContent className="flex flex-col items-center gap-4">
-            <p className="text-muted-foreground text-center">Share this code with the borrower to start the rental.</p>
+            <p className="text-muted-foreground text-center">Provide this 4-digit PIN to the borrower to complete the transaction.</p>
             <div className="p-4 border-2 border-dashed rounded-lg w-full text-center">
-              <p className="text-sm text-muted-foreground">Handover Code</p>
-              <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handoverCode}</p>
+              <p className="text-sm text-muted-foreground">Handover PIN</p>
+              <p className="text-5xl font-bold tracking-widest text-primary">{transaction.pin}</p>
             </div>
             <p className="text-muted-foreground text-center mt-4">Waiting for borrower to verify...</p>
-          </CardContent>
-        );
-      case 'pending-end':
-        return (
-          <CardContent className="w-full space-y-4">
-            <p className="text-muted-foreground text-center">Enter the return code from the borrower to complete the transaction.</p>
-            <div className="flex items-center gap-2">
-              <KeyRound className="text-muted-foreground" />
-              <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isProcessing} />
-            </div>
-            <Button onClick={handleVerifyReturn} className="w-full" disabled={isProcessing || enteredCode.length !== 6}>
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Return
-            </Button>
           </CardContent>
         );
       case 'completed':
         return (
           <CardContent className="text-center space-y-2">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto"/>
-            <h3 className="font-semibold text-lg">Rental Completed!</h3>
+            <h3 className="font-semibold text-lg">Transaction Completed!</h3>
           </CardContent>
         );
       default: return null;
@@ -196,54 +158,34 @@ export default function TransactionPage() {
     if (!transaction) return null;
     switch (transaction.status) {
       case 'pending-handshake':
-         return (
-          <CardContent className="text-center space-y-2">
-            <Hourglass className="h-12 w-12 text-muted-foreground mx-auto"/>
-            <h3 className="font-semibold text-lg">Waiting for Lender</h3>
-            <p className="text-muted-foreground">The lender has been notified and needs to accept your request.</p>
-          </CardContent>
-        );
-      case 'active':
-        if (!transaction.startTime) {
-          return (
-            <CardContent className="w-full space-y-4">
-              <p className="text-muted-foreground text-center">Enter the 6-digit code from the lender to start the rental.</p>
-              <div className="flex items-center gap-2">
-                <KeyRound className="text-muted-foreground" />
-                <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isProcessing} />
-              </div>
-              <Button onClick={handleVerifyHandover} className="w-full" disabled={isProcessing || enteredCode.length !== 6}>
-                {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verify Handover
-              </Button>
-            </CardContent>
-          );
-        }
         return (
-          <CardContent className="w-full text-center space-y-4">
-            <h3 className="font-semibold text-lg">Rental in Progress</h3>
-            <p className="text-muted-foreground">Click below when you are ready to return the item.</p>
-            <Button onClick={handleRequestReturn} variant="outline" className="w-full" disabled={isProcessing}>
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Request Return
-            </Button>
-          </CardContent>
-        );
-      case 'pending-end':
-        return (
-          <CardContent className="flex flex-col items-center gap-4">
-            <p className="text-muted-foreground text-center">Share this new code with the lender to complete the return.</p>
-            <div className="p-4 border-2 border-dashed rounded-lg w-full text-center">
-              <p className="text-sm text-muted-foreground">Return Code</p>
-              <p className="text-4xl font-bold tracking-widest text-primary">{transaction.returnCode}</p>
+          <CardContent className="w-full space-y-4">
+            <p className="text-muted-foreground text-center">Enter the 4-digit PIN from the lender to verify the handover.</p>
+            <div className="flex justify-center gap-2">
+              {pin.map((digit, index) => (
+                <Input
+                  key={index}
+                  ref={el => inputRefs.current[index] = el}
+                  type="text"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handlePinChange(index, e.target.value)}
+                  className="w-12 h-14 text-center text-2xl font-bold"
+                  disabled={isProcessing}
+                />
+              ))}
             </div>
+            <Button onClick={handleVerifyPin} className="w-full" disabled={isProcessing || pin.join('').length !== 4}>
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify PIN
+            </Button>
           </CardContent>
         );
       case 'completed':
         return (
           <CardContent className="text-center space-y-2">
             <CheckCircle className="h-12 w-12 text-green-500 mx-auto"/>
-            <h3 className="font-semibold text-lg">Rental Completed!</h3>
+            <h3 className="font-semibold text-lg">Transaction Completed!</h3>
           </CardContent>
         );
       default: return null;
@@ -291,6 +233,8 @@ export default function TransactionPage() {
 
     return null;
   };
+  
+  const isCancellable = transaction && transaction.status === 'pending-handshake';
 
   return (
     <div className="flex flex-col gap-4 items-center">
@@ -304,7 +248,7 @@ export default function TransactionPage() {
             </Button>
           </div>
           <CardTitle className="font-headline text-2xl">
-            Transaction Handshake
+            PIN Verification
           </CardTitle>
            <CardDescription>
             For {transaction?.itemName || '...'}
@@ -318,12 +262,20 @@ export default function TransactionPage() {
             </CardContent>
         )}
         {renderContent()}
-        {transaction?.status === 'completed' && (
-             <CardFooter>
+        <CardFooter className="flex flex-col gap-2">
+            {transaction?.status === 'completed' && (
                 <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
-              </CardFooter>
-        )}
+            )}
+            {isCancellable && (
+                <Button variant="destructive" className="w-full" onClick={handleCancelTransaction} disabled={isProcessing}>
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <ShieldX className="mr-2 h-4 w-4"/>}
+                    Cancel Transaction
+                </Button>
+            )}
+        </CardFooter>
       </Card>
     </div>
   );
 }
+
+    

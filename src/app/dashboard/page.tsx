@@ -83,6 +83,8 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
   
     try {
+      const pin = Math.floor(1000 + Math.random() * 9000).toString();
+
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
@@ -91,8 +93,7 @@ export default function Dashboard() {
         itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
         karma: 10,
         status: 'pending-handshake',
-        handoverCode: '',
-        returnCode: '',
+        pin: pin,
         createdAt: new Date().toISOString(),
         originalRequestId: request.id,
       };
