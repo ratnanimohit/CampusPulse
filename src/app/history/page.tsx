@@ -6,13 +6,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileX, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, and } from "firebase/firestore";
+import { collection, query, where, orderBy } from "firebase/firestore";
 
 type Transaction = {
   id: string;
   itemName: string;
-  lenderId: string;
-  borrowerId: string;
+  fulfillerId: string;
+  requesterId: string;
   status: string;
   createdAt: {
     seconds: number;
@@ -30,10 +30,8 @@ export default function HistoryPage() {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            and(
-                where('status', '==', 'completed'),
-                where('lenderId', '==', user.uid)
-            )
+            where('status', '==', 'completed'),
+            where('fulfillerId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -41,10 +39,8 @@ export default function HistoryPage() {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            and(
-                where('status', '==', 'completed'),
-                where('borrowerId', '==', user.uid)
-            )
+            where('status', '==', 'completed'),
+            where('requesterId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -107,8 +103,8 @@ export default function HistoryPage() {
                                 <TableRow key={tx.id}>
                                     <TableCell className="font-medium">{tx.itemName}</TableCell>
                                     <TableCell>
-                                        <Badge variant={tx.lenderId === user?.uid ? 'secondary' : 'outline'}>
-                                            {tx.lenderId === user?.uid ? 'Lent' : 'Borrowed'}
+                                        <Badge variant={tx.fulfillerId === user?.uid ? 'secondary' : 'outline'}>
+                                            {tx.fulfillerId === user?.uid ? 'Lent' : 'Borrowed'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{getTransactionDate(tx.createdAt)}</TableCell>
