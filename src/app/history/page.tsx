@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileX, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, or } from "firebase/firestore";
+import { collection, query, where, or, and } from "firebase/firestore";
 
 type Transaction = {
   id: string;
@@ -25,11 +25,13 @@ export default function HistoryPage() {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            or(
-                where('lenderId', '==', user.uid),
-                where('borrowerId', '==', user.uid)
-            ),
-            where('status', '==', 'completed')
+            and(
+                or(
+                    where('lenderId', '==', user.uid),
+                    where('borrowerId', '==', user.uid)
+                ),
+                where('status', '==', 'completed')
+            )
         );
     }, [user, firestore]);
 
