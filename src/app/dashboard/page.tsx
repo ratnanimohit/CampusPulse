@@ -26,7 +26,6 @@ import {
   collection,
   query,
   where,
-  doc,
   addDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -83,18 +82,19 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
   
     try {
-      const pin = Math.floor(1000 + Math.random() * 9000).toString();
-
+      // Create a new transaction document based on the item request
       const transactionData = {
-        lenderId: user.uid,
-        borrowerId: request.requesterId,
+        requesterId: request.requesterId,
+        fulfillerId: null, // Fulfiller is not set until they click "Fulfill"
         itemId: request.id, 
         itemName: request.itemName,
         itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
         karma: 10,
-        status: 'pending-handshake',
-        pin: pin,
+        status: 'requested', // Initial status
+        verificationCode: null,
+        codeVerified: false,
         createdAt: new Date().toISOString(),
+        completedAt: null,
         originalRequestId: request.id,
       };
   
@@ -113,7 +113,7 @@ export default function Dashboard() {
       toast({
         variant: 'destructive',
         title: 'Fulfillment Failed',
-        description: 'Could not complete the fulfillment process.',
+        description: 'Could not start the transaction process.',
       });
     } finally {
       setIsFulfilling(null);
@@ -378,5 +378,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    

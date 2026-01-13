@@ -88,62 +88,55 @@
       "type": "object",
       "description": "Represents a rental transaction between two users.",
       "properties": {
-        "id": {
+        "requesterId": {
           "type": "string",
-          "description": "Unique identifier for the transaction."
+          "description": "The UID of the user who requested the item."
         },
-        "lenderId": {
+        "fulfillerId": {
           "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Transaction as Lender)"
-        },
-        "borrowerId": {
-          "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Transaction as Borrower)"
-        },
-        "itemId": {
-          "type": "string",
-          "description": "Reference to ItemListing. (Relationship: ItemListing 1:N Transaction)"
-        },
-        "startTime": {
-          "type": "string",
-          "description": "Date and time when the rental started.",
-          "format": "date-time"
-        },
-        "endTime": {
-          "type": "string",
-          "description": "Date and time when the rental is expected to end.",
-          "format": "date-time"
-        },
-        "actualEndTime": {
-          "type": "string",
-          "description": "Date and time when the rental actually ended.",
-          "format": "date-time"
-        },
-        "rating": {
-          "type": "number",
-          "description": "Rating given by the borrower to the lender (0-5)."
+          "description": "The UID of the user who fulfilled the request."
         },
         "status": {
           "type": "string",
-          "description": "The current state of the transaction (e.g., pending-handshake, active, pending-end, completed).",
-          "enum": ["pending-handshake", "active", "pending-end", "completed"]
+          "description": "The current state of the transaction.",
+          "enum": ["requested", "awaiting_verification", "completed", "cancelled"]
         },
-        "handoverCode": {
+        "verificationCode": {
           "type": "string",
-          "description": "A 6-digit code for the initial item handover."
+          "description": "The 6-digit code for verification."
         },
-        "returnCode": {
+        "codeVerified": {
+          "type": "boolean",
+          "description": "Whether the code has been successfully verified."
+        },
+        "createdAt": {
           "type": "string",
-          "description": "A 6-digit code for the final item return."
+          "format": "date-time",
+          "description": "Timestamp when the transaction was initiated."
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the transaction was completed."
+        },
+        "itemId": {
+          "type": "string",
+          "description": "Reference to the original ItemRequest ID."
+        },
+         "itemName": {
+          "type": "string",
+          "description": "Name of the item being transacted."
+        },
+        "itemImageUrl": {
+          "type": "string",
+          "description": "Image URL of the item."
+        },
+        "karma": {
+            "type": "number",
+            "description": "Karma points for the transaction."
         }
       },
-      "required": [
-        "id",
-        "lenderId",
-        "borrowerId",
-        "itemId",
-        "status"
-      ]
+      "required": ["requesterId", "status", "createdAt", "itemId", "itemName"]
     },
     "ItemRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -248,5 +241,3 @@
     "reasoning": "The Firestore structure is designed to ensure authorization independence, clarity, and scalability. User profiles and item listings are stored in separate collections to optimize querying. Item requests are handled in a separate collection as well. Transactions are stored in a dedicated collection. To ensure authorization independence, the `ownerId` is stored within each `ItemListing` document, allowing rules to validate ownership without complex `get()` calls. Similarly, `requesterId` is stored in `ItemRequest`. Each `Transaction` stores `lenderId`, `borrowerId`, and `itemId` for similar reasons.\n\nThe structure also facilitates secure list operations. By segregating data into collections based on entity type (users, items, requests, transactions), rules can be applied to entire collections rather than relying on document-level filtering. Using the dedicated collections approach alongside path-based ownership for private data and existence-over-content for global roles allows us to achieve Authorization Independence, DBAC, and support QAPs, thereby supporting secure list operations."
   }
 }
-
-    
