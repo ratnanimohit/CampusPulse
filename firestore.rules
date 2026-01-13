@@ -96,11 +96,14 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages private transaction records. Any authenticated user can read/write.
+     * @description Manages private transaction records. Any authenticated user can read/write individual documents they are part of.
      * @path /transactions/{transactionId}
      */
     match /transactions/{transactionId} {
-      allow read, write: if isSignedIn();
+      allow get: if isTransactionParticipant();
+      allow list: if isSignedIn() && (request.query.where.lenderId == request.auth.uid || request.query.where.borrowerId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isTransactionParticipant();
     }
 
     /**
