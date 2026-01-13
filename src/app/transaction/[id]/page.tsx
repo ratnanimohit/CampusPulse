@@ -168,135 +168,151 @@ export default function TransactionPage() {
     setIsVerifying(false);
   }
 
-  const renderLenderView = () => {
-    if (transaction.status === 'pending-handshake') {
-      return {
-        description: 'Share the 6-digit code below with the borrower to start the rental.',
-        content: (
-          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-            <p className="text-sm text-muted-foreground">Verification Code</p>
-            <p className="text-4xl font-bold tracking-widest text-primary">
-              {transaction.handshakeCode}
-            </p>
-          </div>
-        ),
-      };
-    }
-    if (transaction.status === 'active') {
-      return {
-        description: `Rental in progress for ${transaction.itemName}.`,
-        content: <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>,
-      };
-    }
-    if (transaction.status === 'pending-end') {
-      return {
-        description: 'Enter the code from the borrower to confirm the return.',
-        content: (
-          <div className="w-full space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="text-muted-foreground" />
-              <Input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={enteredCode}
-                onChange={e => setEnteredCode(e.target.value)}
-                className="text-center text-lg tracking-widest"
-                disabled={isVerifying}
-              />
-            </div>
-            <Button
-              onClick={handleConfirmReturn}
-              className="w-full"
-              disabled={isVerifying || enteredCode.length !== 6}
-            >
-              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Return
-            </Button>
-          </div>
-        ),
-      };
-    }
-    return {
-      description: 'This transaction has been completed.',
-      content: (
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground text-center">This transaction is complete.</p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/dashboard">Back to Dashboard</Link>
-          </Button>
-        </div>
-      ),
-    };
-  };
+  // Determine the content based on the user's role
+  let roleSpecificContent;
+  if (isLender) {
+      if (transaction.status === 'pending-handshake') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Share the 6-digit code below with the borrower to start the rental.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                      <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                          <p className="text-sm text-muted-foreground">Verification Code</p>
+                          <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
+                      </div>
+                  </CardContent>
+              </>
+          );
+      } else if (transaction.status === 'active') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Rental in progress for {transaction.itemName}.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <p className="text-muted-foreground text-center">Waiting for the borrower to end the rental.</p>
+                  </CardContent>
+              </>
+          );
+      } else if (transaction.status === 'pending-end') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Enter the code from the borrower to confirm the return.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <div className="w-full space-y-4">
+                          <div className="flex items-center gap-2">
+                              <KeyRound className="text-muted-foreground" />
+                              <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
+                          </div>
+                          <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
+                              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Confirm Return
+                          </Button>
+                      </div>
+                  </CardContent>
+              </>
+          );
+      } else { // completed
+          roleSpecificContent = (
+              <>
+                  <CardDescription>This transaction has been completed.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <p className="text-muted-foreground text-center">This transaction is complete.</p>
+                      <Button asChild variant="outline" className="mt-4"><Link href="/dashboard">Back to Dashboard</Link></Button>
+                  </CardContent>
+              </>
+          );
+      }
+  } else if (isBorrower) {
+      if (transaction.status === 'pending-handshake') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Enter the 6-digit code from the lender to start the rental.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <div className="w-full space-y-4">
+                          <div className="flex items-center gap-2">
+                              <KeyRound className="text-muted-foreground" />
+                              <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
+                          </div>
+                          <Button onClick={handleVerifyCode} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
+                              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Start Rental
+                          </Button>
+                      </div>
+                  </CardContent>
+              </>
+          );
+      } else if (transaction.status === 'active') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Rental in progress for {transaction.itemName}.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <Button onClick={handleEndRental} variant="outline" className="w-full">End Rental & Generate Return Code</Button>
+                  </CardContent>
+              </>
+          );
+      } else if (transaction.status === 'pending-end') {
+          roleSpecificContent = (
+              <>
+                  <CardDescription>Share the new 6-digit code with the lender to complete the return.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                          <p className="text-sm text-muted-foreground">Return Code</p>
+                          <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
+                      </div>
+                  </CardContent>
+              </>
+          );
+      } else { // completed
+           roleSpecificContent = (
+              <>
+                  <CardDescription>This transaction has been completed.</CardDescription>
+                  <CardContent className="flex flex-col items-center gap-6">
+                       <div className="relative w-48 h-48">
+                           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
+                      </div>
+                      <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
+                      <p className="text-muted-foreground text-center">This transaction is complete.</p>
+                      <Button asChild variant="outline" className="mt-4"><Link href="/dashboard">Back to Dashboard</Link></Button>
+                  </CardContent>
+              </>
+          );
+      }
+  } else {
+    roleSpecificContent = (
+      <CardContent>
+        <p>You are not a participant in this transaction.</p>
+        <Button asChild variant="outline" className="mt-4"><Link href="/dashboard">Back to Dashboard</Link></Button>
+      </CardContent>
+    );
+  }
 
-  const renderBorrowerView = () => {
-    if (transaction.status === 'pending-handshake') {
-      return {
-        description: 'Enter the 6-digit code from the lender to start the rental.',
-        content: (
-          <div className="w-full space-y-4">
-            <div className="flex items-center gap-2">
-              <KeyRound className="text-muted-foreground" />
-              <Input
-                type="text"
-                maxLength={6}
-                placeholder="Enter 6-digit code"
-                value={enteredCode}
-                onChange={e => setEnteredCode(e.target.value)}
-                className="text-center text-lg tracking-widest"
-                disabled={isVerifying}
-              />
-            </div>
-            <Button
-              onClick={handleVerifyCode}
-              className="w-full"
-              disabled={isVerifying || enteredCode.length !== 6}
-            >
-              {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Start Rental
-            </Button>
-          </div>
-        ),
-      };
-    }
-    if (transaction.status === 'active') {
-      return {
-        description: `Rental in progress for ${transaction.itemName}.`,
-        content: (
-          <Button onClick={handleEndRental} variant="outline" className="w-full">
-            End Rental & Generate Return Code
-          </Button>
-        ),
-      };
-    }
-    if (transaction.status === 'pending-end') {
-      return {
-        description: 'Share the new 6-digit code with the lender to complete the return.',
-        content: (
-          <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-            <p className="text-sm text-muted-foreground">Return Code</p>
-            <p className="text-4xl font-bold tracking-widest text-primary">
-              {transaction.handshakeCode}
-            </p>
-          </div>
-        ),
-      };
-    }
-    return {
-      description: 'This transaction has been completed.',
-      content: (
-        <div className="text-center space-y-4">
-          <p className="text-muted-foreground text-center">This transaction is complete.</p>
-          <Button asChild variant="outline" className="mt-4">
-            <Link href="/dashboard">Back to Dashboard</Link>
-          </Button>
-        </div>
-      ),
-    };
-  };
-  
-  const { description, content } = isLender ? renderLenderView() : isBorrower ? renderBorrowerView() : { description: 'You are not a participant in this transaction.', content: null };
 
   return (
     <div className="flex flex-col gap-4 items-center">
@@ -312,24 +328,8 @@ export default function TransactionPage() {
           <CardTitle className="font-headline text-2xl">
             Transaction Details
           </CardTitle>
-          <CardDescription>{description}</CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6">
-          <div className="relative w-48 h-48">
-            <Image
-              src={transaction.itemImageUrl}
-              alt={transaction.itemName}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-lg"
-              data-ai-hint="item"
-            />
-          </div>
-          <h2 className="text-xl font-semibold">{transaction.itemName}</h2>
-          <div className="w-full space-y-4">
-             {content}
-          </div>
-        </CardContent>
+        {roleSpecificContent}
       </Card>
     </div>
   );
