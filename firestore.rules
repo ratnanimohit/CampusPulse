@@ -22,7 +22,7 @@
  * - Fulfillment Flexibility: Any signed-in user can delete an item request, as this action
  *   is part of the 'fulfillment' workflow which transitions the public request to a private transaction.
  * - Transaction Secrecy: Transactions are private and can only be viewed or modified by the
- *   two participants (lender and borrower). Listing all transactions is disallowed.
+ *   two participants (lender and borrower). Listing all transactions is disallowed, except for queries where the user is a participant.
  *
  * Denormalization for Authorization:
  * To create performant and secure rules, authorization data is denormalized. For example,
@@ -147,14 +147,14 @@ service cloud.firestore {
      * @description Manages private transaction records between a lender and a borrower.
      * @path /transactions/{transactionId}
      * @allow (get) The lender or the borrower can read their own transaction document.
-     * @deny (list) No user can list all transactions in the database.
+     * @deny (list) No user can list all transactions in the database unless filtering by their own UID.
      * @deny (get) A user who is not the lender or borrower cannot read the transaction.
      * @deny (delete) Transactions are treated as immutable records and cannot be deleted.
      * @principle Enforces "Shared Access (Closed Collaborators)" where access is limited to participants listed in the document.
      */
     match /transactions/{transactionId} {
       allow get: if isTransactionParticipant();
-      allow list: if isSignedIn() && (request.query.where.lenderId == request.auth.uid || request.query.where.borrowerId == request.auth.uid);
+      allow list: if isSignedIn() && (request.query.get('lenderId') == request.auth.uid || request.query.get('borrowerId') == request.auth.uid);
       allow create: if isSignedIn() && (request.resource.data.lenderId == request.auth.uid || request.resource.data.borrowerId == request.auth.uid);
       allow update: if isTransactionParticipant() && areTransactionParticipantsImmutable();
       allow delete: if false;
