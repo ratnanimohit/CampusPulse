@@ -159,75 +159,42 @@ export default function TransactionPage() {
     setIsVerifying(false);
   }
 
-  if (isLoading) {
-    return <div className="flex min-h-screen items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
-  }
-
-  if (!transaction) {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center mt-10">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Transaction Not Found</CardTitle>
-                    <CardDescription>This transaction may have been cancelled or does not exist.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button asChild>
-                        <Link href="/dashboard">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-    );
-  }
+  const renderContent = () => {
+    if (isLoading) {
+      return <div className="flex min-h-[300px] items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+    }
   
-  if (!isLender && !isBorrower) {
-    return (
-        <div className="flex flex-col items-center justify-center h-full text-center mt-10">
-            <Card className="w-full max-w-md">
-                <CardHeader>
-                    <CardTitle>Unauthorized</CardTitle>
-                    <CardDescription>You are not a participant in this transaction.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button asChild>
-                        <Link href="/dashboard">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-    );
-  }
+    if (!transaction) {
+      return (
+        <CardContent>
+          <p>Transaction not found.</p>
+          <Button asChild className="mt-4">
+            <Link href="/dashboard">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
+            </Link>
+          </Button>
+        </CardContent>
+      );
+    }
 
-  return (
-    <div className="flex flex-col gap-4 items-center">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="flex justify-start items-center mb-2">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft />
-              </Link>
-            </Button>
-          </div>
-          <CardTitle className="font-headline text-2xl">
-            Transaction Handshake
-          </CardTitle>
-           <CardDescription>
-            For {transaction.itemName}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center gap-6">
-            <div className="relative w-48 h-48">
-              <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item"/>
-            </div>
+    if (!isLender && !isBorrower) {
+        return (
+            <CardContent>
+                <p>You are not a participant in this transaction.</p>
+                <Button asChild className="mt-4">
+                    <Link href="/dashboard">
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Go Back to Dashboard
+                    </Link>
+                </Button>
+            </CardContent>
+        );
+    }
 
-            {/* PENDING HANDSHAKE */}
-            {transaction.status === 'pending-handshake' && (
+    let statusContent;
+
+    switch (transaction.status) {
+        case 'pending-handshake':
+            statusContent = (
                 <>
                 {isLender && (
                     <div className="w-full text-center">
@@ -252,10 +219,10 @@ export default function TransactionPage() {
                     </div>
                 )}
                 </>
-            )}
-
-            {/* ACTIVE RENTAL */}
-            {transaction.status === 'active' && (
+            );
+            break;
+        case 'active':
+            statusContent = (
                 <>
                 {isLender && (
                     <div className="text-center">
@@ -274,53 +241,86 @@ export default function TransactionPage() {
                     </div>
                 )}
                 </>
-            )}
-            
-            {/* PENDING END */}
-            {transaction.status === 'pending-end' && (
-                 <>
-                 {isLender && (
-                     <div className="w-full space-y-4">
-                         <p className="text-muted-foreground text-center">Enter the return code from the borrower to confirm the return.</p>
-                         <div className="flex items-center gap-2">
-                             <KeyRound className="text-muted-foreground" />
-                             <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
-                         </div>
-                         <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
-                             {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                             Confirm Return
-                         </Button>
-                     </div>
-                 )}
-                 {isBorrower && (
-                    <div className="w-full text-center">
-                        <p className="text-muted-foreground mb-4">Share the new 6-digit code with the lender to complete the return.</p>
-                         <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-                             <p className="text-sm text-muted-foreground">Return Code</p>
-                             <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
-                         </div>
-                     </div>
-                 )}
-                 </>
-            )}
-
-            {/* COMPLETED */}
-            {transaction.status === 'completed' && (
+            );
+            break;
+        case 'pending-end':
+            statusContent = (
+                <>
+                {isLender && (
+                    <div className="w-full space-y-4">
+                        <p className="text-muted-foreground text-center">Enter the return code from the borrower to confirm the return.</p>
+                        <div className="flex items-center gap-2">
+                            <KeyRound className="text-muted-foreground" />
+                            <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
+                        </div>
+                        <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
+                            {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm Return
+                        </Button>
+                    </div>
+                )}
+                {isBorrower && (
+                   <div className="w-full text-center">
+                       <p className="text-muted-foreground mb-4">Share the new 6-digit code with the lender to complete the return.</p>
+                        <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                            <p className="text-sm text-muted-foreground">Return Code</p>
+                            <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
+                        </div>
+                    </div>
+                )}
+                </>
+            );
+            break;
+        case 'completed':
+            statusContent = (
                 <div className="text-center space-y-2">
                     <CheckCircle className="h-12 w-12 text-green-500 mx-auto"/>
                     <h3 className="font-semibold text-lg">Rental Completed!</h3>
                     <p className="text-muted-foreground">This transaction is now finished.</p>
                 </div>
+            );
+            break;
+        default:
+            statusContent = <p>Unknown transaction state.</p>
+    }
+
+    return (
+        <>
+            <CardContent className="flex flex-col items-center gap-6">
+                <div className="relative w-48 h-48">
+                <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item"/>
+                </div>
+                {statusContent}
+            </CardContent>
+            {transaction.status === 'completed' && (
+                <CardFooter>
+                    <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
+                </CardFooter>
             )}
-        </CardContent>
-        {transaction.status === 'completed' && (
-             <CardFooter>
-                 <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
-             </CardFooter>
-        )}
+        </>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4 items-center">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <div className="flex justify-start items-center mb-2">
+            <Button variant="ghost" size="icon" asChild>
+              <Link href="/dashboard">
+                <ArrowLeft />
+              </Link>
+            </Button>
+          </div>
+          <CardTitle className="font-headline text-2xl">
+            Transaction Handshake
+          </CardTitle>
+           <CardDescription>
+            For {transaction?.itemName || '...'}
+          </CardDescription>
+        </CardHeader>
+        {renderContent()}
       </Card>
     </div>
   );
 }
-
-    
