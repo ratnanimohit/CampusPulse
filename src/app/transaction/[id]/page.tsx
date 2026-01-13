@@ -190,111 +190,109 @@ export default function TransactionPage() {
         );
     }
     
-    // --- PENDING HANDSHAKE ---
-    if (transaction.status === 'pending-handshake') {
-        if (isLender) {
-            return (
-              <CardContent className="flex flex-col items-center gap-4">
-                <div className="w-full text-center">
-                  <p className="text-muted-foreground mb-4">Share the 6-digit code below with the borrower to start the rental.</p>
-                  <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-                      <p className="text-sm text-muted-foreground">Verification Code</p>
-                      <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
-                  </div>
-                </div>
-              </CardContent>
-            );
-        }
-        if (isBorrower) {
-            return (
-              <CardContent className="w-full space-y-4">
-                <p className="text-muted-foreground text-center">Enter the 6-digit code from the lender to start the rental.</p>
-                <div className="flex items-center gap-2">
-                    <KeyRound className="text-muted-foreground" />
-                    <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
-                </div>
-                <Button onClick={handleVerifyStartCode} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
-                    {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Start Rental
-                </Button>
-              </CardContent>
-            );
-        }
-    }
+    switch (transaction.status) {
+        case 'pending-handshake':
+            if (isLender) {
+                return (
+                  <CardContent className="flex flex-col items-center gap-4">
+                    <div className="w-full text-center">
+                      <p className="text-muted-foreground mb-4">Share the 6-digit code below with the borrower to start the rental.</p>
+                      <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                          <p className="text-sm text-muted-foreground">Verification Code</p>
+                          <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                );
+            }
+            if (isBorrower) {
+                return (
+                  <CardContent className="w-full space-y-4">
+                    <p className="text-muted-foreground text-center">Enter the 6-digit code from the lender to start the rental.</p>
+                    <div className="flex items-center gap-2">
+                        <KeyRound className="text-muted-foreground" />
+                        <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
+                    </div>
+                    <Button onClick={handleVerifyStartCode} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
+                        {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Start Rental
+                    </Button>
+                  </CardContent>
+                );
+            }
+            break;
 
-    // --- ACTIVE ---
-    if (transaction.status === 'active') {
-        if (isLender) {
-            return (
-              <CardContent className="text-center">
-                <h3 className="font-semibold text-lg">Rental in Progress</h3>
-                <p className="text-muted-foreground">Waiting for the borrower to end the rental.</p>
-              </CardContent>
-            );
-        }
-        if (isBorrower) {
-            return (
-              <CardContent className="w-full text-center space-y-4">
-                <h3 className="font-semibold text-lg">Rental in Progress</h3>
-                <p className="text-muted-foreground">Click the button below when you are ready to return the item.</p>
-                <Button onClick={handleEndRental} variant="outline" className="w-full" disabled={isEnding}>
-                      {isEnding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    End Rental & Generate Return Code
-                </Button>
-              </CardContent>
-            );
-        }
-    }
+        case 'active':
+             if (isLender) {
+                return (
+                  <CardContent className="text-center">
+                    <h3 className="font-semibold text-lg">Rental in Progress</h3>
+                    <p className="text-muted-foreground">Waiting for the borrower to end the rental.</p>
+                  </CardContent>
+                );
+            }
+            if (isBorrower) {
+                return (
+                  <CardContent className="w-full text-center space-y-4">
+                    <h3 className="font-semibold text-lg">Rental in Progress</h3>
+                    <p className="text-muted-foreground">Click the button below when you are ready to return the item.</p>
+                    <Button onClick={handleEndRental} variant="outline" className="w-full" disabled={isEnding}>
+                          {isEnding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        End Rental & Generate Return Code
+                    </Button>
+                  </CardContent>
+                );
+            }
+            break;
 
-    // --- PENDING END ---
-    if (transaction.status === 'pending-end') {
-        if (isLender) {
-            return (
-              <CardContent className="w-full space-y-4">
-                <p className="text-muted-foreground text-center">Enter the return code from the borrower to confirm the return.</p>
-                <div className="flex items-center gap-2">
-                    <KeyRound className="text-muted-foreground" />
-                    <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
-                </div>
-                <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
-                    {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Confirm Return
-                </Button>
-              </CardContent>
-            );
-        }
-        if (isBorrower) {
-            return (
-              <CardContent className="flex flex-col items-center gap-4">
-                <div className="w-full text-center">
-                  <p className="text-muted-foreground mb-4">Share the new 6-digit code with the lender to complete the return.</p>
-                  <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
-                      <p className="text-sm text-muted-foreground">Return Code</p>
-                      <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
-                  </div>
-                </div>
-              </CardContent>
-            );
-        }
-    }
+        case 'pending-end':
+            if (isLender) {
+                return (
+                  <CardContent className="w-full space-y-4">
+                    <p className="text-muted-foreground text-center">Enter the return code from the borrower to confirm the return.</p>
+                    <div className="flex items-center gap-2">
+                        <KeyRound className="text-muted-foreground" />
+                        <Input type="text" maxLength={6} placeholder="Enter 6-digit code" value={enteredCode} onChange={e => setEnteredCode(e.target.value)} className="text-center text-lg tracking-widest" disabled={isVerifying} />
+                    </div>
+                    <Button onClick={handleConfirmReturn} className="w-full" disabled={isVerifying || enteredCode.length !== 6}>
+                        {isVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Confirm Return
+                    </Button>
+                  </CardContent>
+                );
+            }
+            if (isBorrower) {
+                return (
+                  <CardContent className="flex flex-col items-center gap-4">
+                    <div className="w-full text-center">
+                      <p className="text-muted-foreground mb-4">Share the new 6-digit code with the lender to complete the return.</p>
+                      <div className="flex flex-col items-center gap-2 p-4 border-2 border-dashed rounded-lg w-full">
+                          <p className="text-sm text-muted-foreground">Return Code</p>
+                          <p className="text-4xl font-bold tracking-widest text-primary">{transaction.handshakeCode}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                );
+            }
+            break;
 
-    // --- COMPLETED ---
-    if (transaction.status === 'completed') {
-       return (
-          <>
-            <CardContent className="text-center space-y-2">
-                <CheckCircle className="h-12 w-12 text-green-500 mx-auto"/>
-                <h3 className="font-semibold text-lg">Rental Completed!</h3>
-                <p className="text-muted-foreground">This transaction is now finished.</p>
-            </CardContent>
-             <CardFooter>
-                <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
-            </CardFooter>
-          </>
-        );
+        case 'completed':
+            return (
+              <>
+                <CardContent className="text-center space-y-2">
+                    <CheckCircle className="h-12 w-12 text-green-500 mx-auto"/>
+                    <h3 className="font-semibold text-lg">Rental Completed!</h3>
+                    <p className="text-muted-foreground">This transaction is now finished.</p>
+                </CardContent>
+                 <CardFooter>
+                    <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
+                </CardFooter>
+              </>
+            );
+        
+        default:
+            return <CardContent><p>Loading transaction details...</p></CardContent>;
     }
-  
-    return <CardContent><p>Loading transaction details...</p></CardContent>;
   }
 
   return (
@@ -325,3 +323,5 @@ export default function TransactionPage() {
     </div>
   );
 }
+
+    
