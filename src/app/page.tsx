@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,17 +63,19 @@ export default function LoginPage() {
     },
   });
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [user, router]);
+
+
+  if (isUserLoading || user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin" />
       </div>
     );
-  }
-
-  if (user) {
-    router.replace('/dashboard');
-    return null;
   }
 
   const handleAuthError = (error: FirebaseError) => {
