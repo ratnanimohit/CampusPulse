@@ -9,7 +9,6 @@ import {
   Users,
   Settings,
   History,
-  Package2,
   FileQuestion,
   LogOut,
 } from 'lucide-react';
@@ -62,17 +61,11 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
       <nav
         className={cn(
           'grid items-start gap-1 p-2 text-sm font-medium lg:px-4',
-          isMobile && 'grid-rows-auto grid-flow-row gap-4',
+          isMobile && 'grid-rows-auto grid-flow-row gap-4 pt-4',
           className
         )}
         {...props}
       >
-        {isMobile && (
-           <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline p-3">
-              <Package2 className="h-6 w-6 text-primary" />
-              <span className="">Campus Collab</span>
-            </Link>
-        )}
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
       </nav>
       <div className={cn('mt-auto p-2 lg:px-4 space-y-1')}>

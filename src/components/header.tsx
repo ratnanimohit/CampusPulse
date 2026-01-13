@@ -1,7 +1,13 @@
 import Link from 'next/link';
 import { Menu, Package2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
 
@@ -25,6 +31,17 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="p-0">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle>
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 font-semibold font-headline"
+              >
+                <Package2 className="h-6 w-6 text-primary" />
+                <span>Campus Collab</span>
+              </Link>
+            </SheetTitle>
+          </SheetHeader>
           <SidebarNav isMobile={true} />
         </SheetContent>
       </Sheet>
