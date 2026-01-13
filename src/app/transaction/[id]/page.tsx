@@ -18,6 +18,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type Transaction = {
   id: string;
@@ -31,6 +32,7 @@ type Transaction = {
   handshakeCode?: string;
   startTime?: any;
   actualEndTime?: any;
+  originalRequestId?: string;
 };
 
 export default function TransactionPage() {
@@ -57,7 +59,7 @@ export default function TransactionPage() {
   const isBorrower = user?.uid === transaction?.borrowerId;
 
   const handleVerifyStartCode = async () => {
-    if (!transaction || !transactionDocRef || !isBorrower) return;
+    if (!transaction || !transactionDocRef || !isBorrower || !firestore) return;
 
     setIsVerifying(true);
     if (enteredCode === transaction.handshakeCode) {
@@ -67,6 +69,12 @@ export default function TransactionPage() {
             startTime: serverTimestamp(),
             handshakeCode: '', // Clear the code after use
         });
+
+        // After verification, delete the original request
+        if (transaction.originalRequestId) {
+          const requestDocRef = doc(firestore, 'itemRequests', transaction.originalRequestId);
+          deleteDocumentNonBlocking(requestDocRef);
+        }
 
         toast({
             title: 'Rental Started!',
@@ -314,3 +322,5 @@ export default function TransactionPage() {
     </div>
   );
 }
+
+    

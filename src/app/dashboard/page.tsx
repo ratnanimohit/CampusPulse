@@ -98,22 +98,21 @@ export default function Dashboard() {
         status: 'pending-handshake', // Initial status for code verification
         handshakeCode: handshakeCode,
         createdAt: new Date().toISOString(),
+        originalRequestId: request.id, // Keep track of the original request
       };
   
       const transactionsCol = collection(firestore, 'transactions');
       // Use await here to get the doc reference for navigation
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
   
-      // 3. Delete the original item request non-blockingly
-      const requestDocRef = doc(firestore, 'itemRequests', request.id);
-      deleteDocumentNonBlocking(requestDocRef);
+      // DO NOT delete the original item request here. It will be deleted after code verification.
   
       toast({
         title: 'Request Fulfilled!',
         description: `A transaction for "${request.itemName}" is pending. Go to the handshake page.`,
       });
   
-      // 4. Navigate to the transaction page to display the code
+      // 3. Navigate to the transaction page to display the code
       router.push(`/transaction/${transactionDocRef.id}`);
   
     } catch (error) {
@@ -386,3 +385,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
