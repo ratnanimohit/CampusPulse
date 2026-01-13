@@ -154,7 +154,7 @@ service cloud.firestore {
      */
     match /transactions/{transactionId} {
       allow get: if isTransactionParticipant();
-      allow list: if false;
+      allow list: if isSignedIn() && (request.query.where.lenderId == request.auth.uid || request.query.where.borrowerId == request.auth.uid);
       allow create: if isSignedIn() && (request.resource.data.lenderId == request.auth.uid || request.resource.data.borrowerId == request.auth.uid);
       allow update: if isTransactionParticipant() && areTransactionParticipantsImmutable();
       allow delete: if false;
