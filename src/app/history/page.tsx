@@ -24,14 +24,14 @@ type Transaction = {
 export default function HistoryPage() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const [transactions, setTransactions] = useState<Transaction[]>([]);
     
     const lentQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
             where('lenderId', '==', user.uid),
-            where('status', '==', 'completed')
+            where('status', '==', 'completed'),
+            orderBy('createdAt', 'desc')
         );
     }, [user, firestore]);
 
@@ -40,32 +40,36 @@ export default function HistoryPage() {
         return query(
             collection(firestore, 'transactions'),
             where('borrowerId', '==', user.uid),
-            where('status', '==', 'completed')
+            where('status', '==', 'completed'),
+            orderBy('createdAt', 'desc')
         );
     }, [user, firestore]);
 
     const { data: lentTransactions, isLoading: isLoadingLent } = useCollection<Transaction>(lentQuery);
     const { data: borrowedTransactions, isLoading: isLoadingBorrowed } = useCollection<Transaction>(borrowedQuery);
 
+    const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+
     useEffect(() => {
-        if (lentTransactions && borrowedTransactions) {
-            const allTransactions = [...lentTransactions, ...borrowedTransactions];
-            // Remove duplicates that might occur in rare cases
-            const uniqueTransactions = allTransactions.filter(
-                (tx, index, self) => index === self.findIndex(t => t.id === tx.id)
-            );
-            // Sort by creation date
-            uniqueTransactions.sort((a, b) => {
-                const dateA = new Date(typeof a.createdAt === 'string' ? a.createdAt : a.createdAt.seconds * 1000);
-                const dateB = new Date(typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.seconds * 1000);
-                return dateB.getTime() - dateA.getTime();
-            });
-            setTransactions(uniqueTransactions);
-        } else if (lentTransactions) {
-            setTransactions(lentTransactions);
-        } else if (borrowedTransactions) {
-            setTransactions(borrowedTransactions);
-        }
+        const lent = lentTransactions || [];
+        const borrowed = borrowedTransactions || [];
+        
+        const combined = [...lent, ...borrowed];
+        
+        const unique = combined.reduce((acc, current) => {
+            if (!acc.find(item => item.id === current.id)) {
+                acc.push(current);
+            }
+            return acc;
+        }, [] as Transaction[]);
+
+        unique.sort((a, b) => {
+            const dateA = new Date(typeof a.createdAt === 'string' ? a.createdAt : a.createdAt.seconds * 1000);
+            const dateB = new Date(typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.seconds * 1000);
+            return dateB.getTime() - dateA.getTime();
+        });
+
+        setAllTransactions(unique);
 
     }, [lentTransactions, borrowedTransactions]);
 
@@ -79,7 +83,7 @@ export default function HistoryPage() {
         return new Date(createdAt.seconds * 1000).toLocaleDateString();
     };
 
-    if (isLoading) {
+    if (isLoading && allTransactions.length === 0) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-16 w-16 animate-spin" />
@@ -94,7 +98,7 @@ export default function HistoryPage() {
                 <CardDescription>An overview of all your past rental activities.</CardDescription>
             </CardHeader>
             <CardContent>
-                {transactions && transactions.length > 0 ? (
+                {allTransactions.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -105,7 +109,7 @@ export default function HistoryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {transactions.map(tx => (
+                            {allTransactions.map(tx => (
                                 <TableRow key={tx.id}>
                                     <TableCell className="font-medium">{tx.itemName}</TableCell>
                                     <TableCell>
