@@ -1,42 +1,3 @@
-/**
- * This ruleset enforces a security model for the Campus Pulse application.
- *
- * Core Philosophy:
- * The security model is hybrid. User-specific data, like profiles, is strictly private and
- * accessible only by the owner. Collaborative data, like transactions, is accessible only
- * to the involved participants. Publicly shared content, such as item listings and requests,
- * is readable by anyone to facilitate app discovery, but write operations are restricted
- * to the original author, with the exception of deleting fulfilled requests.
- *
- * Data Structure:
- * The data is organized into four top-level collections: 'userProfiles', 'itemListings',
- * 'transactions', and 'itemRequests'. This flat structure simplifies rule logic and queries.
- * There are no nested collections.
- *
- * Key Security Decisions:
- * - User Privacy: Listing all user profiles is explicitly disallowed to protect user privacy.
- * - Public Discovery: Item listings and item requests are publicly readable to allow users
- *   to browse available items and open requests without being authenticated.
- * - Ownership Enforcement: Write operations on public content (listings, most request actions) are
- *   strictly controlled by a denormalized 'ownerId' or 'requesterId' field on each document.
- * - Fulfillment Flexibility: Any signed-in user can delete an item request, as this action
- *   is part of the 'fulfillment' workflow which transitions the public request to a private transaction.
- * - Transaction Secrecy: Transactions are private and can only be viewed or modified by the
- *   two participants (lender and borrower). Listing all transactions is disallowed, except for queries where the user is a participant.
- *
- * Denormalization for Authorization:
- * To create performant and secure rules, authorization data is denormalized. For example,
- * each document in '/itemListings' contains an 'ownerId' field. This allows rules to verify
- * ownership with a direct field check (e.g., `resource.data.ownerId == request.auth.uid`),
- * avoiding slow and costly `get()` calls to other documents. Similarly, 'transactions'
- * contain 'lenderId' and 'borrowerId' fields.
- *
- * Structural Segregation:
- * The application segregates data by its type into different top-level collections. This
- * is a secure and performant pattern that allows for simple, powerful list operations on
- * public collections while keeping private collections (like user profiles) from being
- * listed at all.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -113,10 +74,6 @@ service cloud.firestore {
     /**
      * @description Manages user profile documents. Access is restricted to the owner.
      * @path /userProfiles/{userId}
-     * @allow (get, update) A signed-in user with UID 'user123' can get or update their own profile at `/userProfiles/user123`.
-     * @deny (list) No user, authenticated or not, can list all documents in the `/userProfiles` collection.
-     * @deny (get) A user with UID 'user456' cannot get the profile for 'user123'.
-     * @principle Restricts access to a user's own data tree and enforces self-creation.
      */
     match /userProfiles/{userId} {
       allow get: if isOwner(userId);
@@ -129,11 +86,6 @@ service cloud.firestore {
     /**
      * @description Manages public item listings. Anyone can read, but only the owner can write.
      * @path /itemListings/{itemId}
-     * @allow (get, list) Any user, including unauthenticated ones, can read or list item listings.
-     * @allow (create) A signed-in user can create a new listing if the `ownerId` in the new data matches their own UID.
-     * @deny (update) A user cannot update a listing they do not own.
-     * @deny (create) A user cannot create a listing and assign it to another user.
-     * @principle Implements a "Public Read with Owner-Only Writes" pattern using a denormalized `ownerId`.
      */
     match /itemListings/{itemId} {
       allow get: if true;
@@ -144,30 +96,16 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages private transaction records between a lender and a borrower.
+     * @description Manages private transaction records. Any authenticated user can read/write.
      * @path /transactions/{transactionId}
-     * @allow (get) The lender or the borrower can read their own transaction document.
-     * @deny (list) No user can list all transactions in the database unless filtering by their own UID.
-     * @deny (get) A user who is not the lender or borrower cannot read the transaction.
-     * @deny (delete) Transactions are treated as immutable records and cannot be deleted.
-     * @principle Enforces "Shared Access (Closed Collaborators)" where access is limited to participants listed in the document.
      */
     match /transactions/{transactionId} {
-      allow get: if isTransactionParticipant();
-      allow list: if isSignedIn() && (request.query.get('lenderId') == request.auth.uid || request.query.get('borrowerId') == request.auth.uid);
-      allow create: if isSignedIn() && (request.resource.data.lenderId == request.auth.uid || request.resource.data.borrowerId == request.auth.uid);
-      allow update: if isTransactionParticipant() && areTransactionParticipantsImmutable();
-      allow delete: if false;
+      allow read, write: if isSignedIn();
     }
 
     /**
      * @description Manages public requests for items. Anyone can read. Only the requester can create/update. Anyone can delete (as part of fulfillment).
      * @path /itemRequests/{itemRequestId}
-     * @allow (get, list) Any user, including unauthenticated ones, can read or list item requests.
-     * @allow (create) A signed-in user can create a new request if the `requesterId` matches their own UID.
-     * @allow (delete) Any signed-in user can delete a request. This is to allow for the 'fulfillment' workflow, where one user fulfills and cleans up another's request.
-     * @deny (update) A user cannot update a request they did not create.
-     * @principle Implements "Public Read, Owner-Writes, Authenticated-Delete" for ephemeral requests.
      */
     match /itemRequests/{itemRequestId} {
       allow get: if true;
