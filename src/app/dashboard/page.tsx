@@ -30,7 +30,6 @@ import {
   addDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -84,35 +83,28 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
   
     try {
-      // 1. Generate a 6-digit handshake code
-      const handshakeCode = Math.floor(100000 + Math.random() * 900000).toString();
-  
-      // 2. Create a new transaction
       const transactionData = {
         lenderId: user.uid,
         borrowerId: request.requesterId,
-        itemId: request.id, // Using request ID as a stand-in for a real item ID
+        itemId: request.id, 
         itemName: request.itemName,
         itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
-        karma: 10, // Default karma
-        status: 'pending-handshake', // Initial status for code verification
-        handshakeCode: handshakeCode,
+        karma: 10,
+        status: 'pending-handshake',
+        handoverCode: '',
+        returnCode: '',
         createdAt: new Date().toISOString(),
-        originalRequestId: request.id, // Keep track of the original request
+        originalRequestId: request.id,
       };
   
       const transactionsCol = collection(firestore, 'transactions');
-      // Use await here to get the doc reference for navigation
       const transactionDocRef = await addDoc(transactionsCol, transactionData);
   
-      // DO NOT delete the original item request here. It will be deleted after code verification.
-  
       toast({
-        title: 'Request Fulfilled!',
-        description: `A transaction for "${request.itemName}" is pending. Go to the handshake page.`,
+        title: 'Request Accepted!',
+        description: `Proceed to the transaction page to complete the handover.`,
       });
   
-      // 3. Navigate to the transaction page to display the code
       router.push(`/transaction/${transactionDocRef.id}`);
   
     } catch (error) {
@@ -211,7 +203,7 @@ export default function Dashboard() {
             </CardTitle>
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0-0 24 24"
+              viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeLinecap="round"
@@ -385,3 +377,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    

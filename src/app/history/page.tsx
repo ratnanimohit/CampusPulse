@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileX, Loader2 } from "lucide-react";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, where, orderBy, or } from "firebase/firestore";
 
 type Transaction = {
   id: string;
@@ -25,55 +25,20 @@ export default function HistoryPage() {
     const { user } = useUser();
     const firestore = useFirestore();
     
-    const lentQuery = useMemoFirebase(() => {
+    const transactionsQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            where('lenderId', '==', user.uid),
             where('status', '==', 'completed'),
+            or(
+                where('lenderId', '==', user.uid),
+                where('borrowerId', '==', user.uid)
+            ),
             orderBy('createdAt', 'desc')
         );
     }, [user, firestore]);
 
-    const borrowedQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
-        return query(
-            collection(firestore, 'transactions'),
-            where('borrowerId', '==', user.uid),
-            where('status', '==', 'completed'),
-            orderBy('createdAt', 'desc')
-        );
-    }, [user, firestore]);
-
-    const { data: lentTransactions, isLoading: isLoadingLent } = useCollection<Transaction>(lentQuery);
-    const { data: borrowedTransactions, isLoading: isLoadingBorrowed } = useCollection<Transaction>(borrowedQuery);
-
-    const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
-
-    useEffect(() => {
-        const lent = lentTransactions || [];
-        const borrowed = borrowedTransactions || [];
-        
-        const combined = [...lent, ...borrowed];
-        
-        const unique = combined.reduce((acc, current) => {
-            if (!acc.find(item => item.id === current.id)) {
-                acc.push(current);
-            }
-            return acc;
-        }, [] as Transaction[]);
-
-        unique.sort((a, b) => {
-            const dateA = new Date(typeof a.createdAt === 'string' ? a.createdAt : a.createdAt.seconds * 1000);
-            const dateB = new Date(typeof b.createdAt === 'string' ? b.createdAt : b.createdAt.seconds * 1000);
-            return dateB.getTime() - dateA.getTime();
-        });
-
-        setAllTransactions(unique);
-
-    }, [lentTransactions, borrowedTransactions]);
-
-    const isLoading = isLoadingLent || isLoadingBorrowed;
+    const { data: transactions, isLoading } = useCollection<Transaction>(transactionsQuery);
 
     const getTransactionDate = (createdAt: { seconds: number; nanoseconds: number; } | string) => {
         if (!createdAt) return 'N/A';
@@ -83,7 +48,7 @@ export default function HistoryPage() {
         return new Date(createdAt.seconds * 1000).toLocaleDateString();
     };
 
-    if (isLoading && allTransactions.length === 0) {
+    if (isLoading && (!transactions || transactions.length === 0)) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-16 w-16 animate-spin" />
@@ -98,7 +63,7 @@ export default function HistoryPage() {
                 <CardDescription>An overview of all your past rental activities.</CardDescription>
             </CardHeader>
             <CardContent>
-                {allTransactions.length > 0 ? (
+                {transactions && transactions.length > 0 ? (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -109,7 +74,7 @@ export default function HistoryPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {allTransactions.map(tx => (
+                            {transactions.map(tx => (
                                 <TableRow key={tx.id}>
                                     <TableCell className="font-medium">{tx.itemName}</TableCell>
                                     <TableCell>
@@ -138,3 +103,5 @@ export default function HistoryPage() {
         </Card>
     );
 }
+
+    
