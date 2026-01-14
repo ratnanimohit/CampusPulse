@@ -3,13 +3,14 @@
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Trash } from "lucide-react";
 import Image from 'next/image';
 import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
+import { DeleteItemDialog } from '@/components/delete-item-dialog';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, setDoc } from 'firebase/firestore';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export type Item = {
     id: string;
@@ -24,6 +25,7 @@ export default function LockerPage() {
     const firestore = useFirestore();
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [editingItem, setEditingItem] = useState<Item | null>(null);
+    const [deletingItem, setDeletingItem] = useState<Item | null>(null);
 
     const userItemsQuery = useMemoFirebase(() => 
         (user && firestore) ? query(collection(firestore, 'itemListings'), where('ownerId', '==', user.uid)) : null
@@ -55,6 +57,13 @@ export default function LockerPage() {
         
         setEditingItem(null);
     };
+
+    const handleItemDeleted = (itemId: string) => {
+        if (!firestore) return;
+        const itemDocRef = doc(firestore, 'itemListings', itemId);
+        deleteDocumentNonBlocking(itemDocRef);
+        setDeletingItem(null);
+    };
     
     if (isUserLoading || isLoadingItems) {
         return <div>Loading locker...</div>;
@@ -74,12 +83,22 @@ export default function LockerPage() {
             </div>
 
             <AddItemDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onItemAdded={handleItemAdded} />
+            
             {editingItem && (
                 <EditItemDialog 
                     isOpen={!!editingItem} 
                     onOpenChange={(isOpen) => !isOpen && setEditingItem(null)} 
                     onItemUpdated={handleItemUpdated}
                     item={editingItem}
+                />
+            )}
+
+            {deletingItem && (
+                <DeleteItemDialog
+                    isOpen={!!deletingItem}
+                    onOpenChange={() => setDeletingItem(null)}
+                    onConfirm={() => handleItemDeleted(deletingItem.id)}
+                    itemName={deletingItem.name}
                 />
             )}
 
@@ -101,8 +120,12 @@ export default function LockerPage() {
                                 <CardTitle className="text-lg font-headline">{item.name}</CardTitle>
                                 <CardDescription>{item.karma} Karma</CardDescription>
                             </CardContent>
-                            <CardFooter className="p-4 pt-0">
+                            <CardFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
                                 <Button size="sm" variant="outline" className="w-full" onClick={() => setEditingItem(item)}>Edit</Button>
+                                <Button size="sm" variant="destructive" className="w-full" onClick={() => setDeletingItem(item)}>
+                                    <Trash className="mr-2 h-4 w-4" />
+                                    Delete
+                                </Button>
                             </CardFooter>
                         </Card>
                     ))}
