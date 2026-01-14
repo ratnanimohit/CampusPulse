@@ -24,10 +24,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { Item } from '@/app/locker/page';
-import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
 
 const editItemSchema = z.object({
   id: z.string(),
@@ -46,7 +42,6 @@ interface EditItemDialogProps {
 
 export function EditItemDialog({ isOpen, onOpenChange, onItemUpdated, item }: EditItemDialogProps) {
   const { toast } = useToast();
-  const firestore = useFirestore();
 
   const form = useForm<EditedItem>({
     resolver: zodResolver(editItemSchema),

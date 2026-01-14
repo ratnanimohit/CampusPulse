@@ -9,8 +9,7 @@ import { AddItemDialog, type NewItem } from '@/components/add-item-dialog';
 import { EditItemDialog, type EditedItem } from '@/components/edit-item-dialog';
 import { DeleteItemDialog } from '@/components/delete-item-dialog';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, setDoc } from 'firebase/firestore';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, where, doc, addDoc, setDoc, deleteDoc } from 'firebase/firestore';
 
 export type Item = {
     id: string;
@@ -33,7 +32,7 @@ export default function LockerPage() {
 
     const { data: userItems, isLoading: isLoadingItems } = useCollection<Item>(userItemsQuery);
 
-    const handleItemAdded = (newItem: NewItem) => {
+    const handleItemAdded = async (newItem: NewItem) => {
         if (!user || !firestore) return;
         const itemData = {
             name: newItem.itemName,
@@ -43,14 +42,14 @@ export default function LockerPage() {
             available: true,
         };
         const itemListingsCol = collection(firestore, 'itemListings');
-        addDocumentNonBlocking(itemListingsCol, itemData);
+        await addDoc(itemListingsCol, itemData);
     };
 
-    const handleItemUpdated = (updatedItem: EditedItem) => {
+    const handleItemUpdated = async (updatedItem: EditedItem) => {
         if (!firestore) return;
         const itemDocRef = doc(firestore, 'itemListings', updatedItem.id);
         
-        setDocumentNonBlocking(itemDocRef, {
+        await setDoc(itemDocRef, {
             name: updatedItem.itemName,
             karma: updatedItem.karma,
         }, { merge: true });
@@ -58,10 +57,10 @@ export default function LockerPage() {
         setEditingItem(null);
     };
 
-    const handleItemDeleted = (itemId: string) => {
+    const handleItemDeleted = async (itemId: string) => {
         if (!firestore) return;
         const itemDocRef = doc(firestore, 'itemListings', itemId);
-        deleteDocumentNonBlocking(itemDocRef);
+        await deleteDoc(itemDocRef);
         setDeletingItem(null);
     };
     

@@ -32,8 +32,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, setDoc } from 'firebase/firestore';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -60,7 +59,7 @@ export default function RequestsPage() {
     },
   });
 
-  function onSubmit(data: RequestFormValues) {
+  async function onSubmit(data: RequestFormValues) {
     if (!user || !firestore) {
       toast({
         variant: 'destructive',
@@ -74,8 +73,8 @@ export default function RequestsPage() {
     // Create a new document reference with a unique ID
     const newRequestRef = doc(itemRequestsCol);
 
-    // Use setDocumentNonBlocking to create the document with the specific ID
-    setDocumentNonBlocking(newRequestRef, {
+    // Use setDoc to create the document with the specific ID
+    await setDoc(newRequestRef, {
       ...data,
       id: newRequestRef.id, // Add the generated ID to the document data
       requesterId: user.uid,

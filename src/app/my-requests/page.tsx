@@ -19,8 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, or, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, where, doc, or, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
 import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
 
@@ -68,16 +67,16 @@ export default function MyRequestsPage() {
   
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  const cancelRequest = (requestId: string, transactionId?: string) => {
+  const cancelRequest = async (requestId: string, transactionId?: string) => {
     if (!firestore) return;
     // Always delete the original request
     const requestDocRef = doc(firestore, 'itemRequests', requestId);
-    deleteDocumentNonBlocking(requestDocRef);
+    await deleteDoc(requestDocRef);
 
     // If a transaction has started, cancel it instead of just deleting the request
     if (transactionId) {
       const transactionDocRef = doc(firestore, 'transactions', transactionId);
-      updateDoc(transactionDocRef, {
+      await updateDoc(transactionDocRef, {
         status: 'CANCELLED',
         updatedAt: serverTimestamp(),
       });
