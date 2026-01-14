@@ -72,10 +72,10 @@ export default function Dashboard() {
 
   // Fetch community requests
   const requestsQuery = useMemoFirebase(
-    () => firestore && query(
+    () => firestore && user ? query(
         collection(firestore, 'itemRequests'), 
-        where('requesterId', '!=', user?.uid || '')
-    ),
+        where('requesterId', '!=', user.uid)
+    ) : null,
     [firestore, user]
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
@@ -103,7 +103,12 @@ export default function Dashboard() {
     }
     const lent = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
     const borrowed = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
-    const active = allTransactions.filter(tx => tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
+    const active = allTransactions.filter(
+        (tx) =>
+          (tx.fulfillerId === user?.uid || tx.requesterId === user?.uid) &&
+          tx.status !== 'COMPLETED' &&
+          tx.status !== 'CANCELLED'
+      ).length;
     return { lent, borrowed, active };
   }, [allTransactions, user]);
   
