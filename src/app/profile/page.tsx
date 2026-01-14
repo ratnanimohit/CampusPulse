@@ -24,16 +24,15 @@ type Transaction = {
 
 export default function ProfilePage() {
     const { user, isUserLoading } = useUser();
+    const firestore = useFirestore();
 
     // Fetch user profile for karma points and name
     const userProfileRef = useMemoFirebase(
         () => (user && firestore ? doc(firestore, 'userProfiles', user.uid) : null),
-        [user]
+        [user, firestore]
     );
     const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
     
-    const firestore = useFirestore();
-
     // Fetch all transactions for the user to calculate stats
     const transactionsQuery = useMemoFirebase(() => {
         if (!user || !firestore) return null;
