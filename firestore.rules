@@ -4,29 +4,29 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
 
-      function isSignedIn() {
+      function signedIn() {
         return request.auth != null;
       }
 
-      function isLender() {
-        return isSignedIn()
+      function lender() {
+        return signedIn()
           && resource.data.lenderId is string
           && request.auth.uid == resource.data.lenderId;
       }
 
-      function isBorrower() {
-        return isSignedIn()
+      function borrower() {
+        return signedIn()
           && resource.data.borrowerId is string
           && request.auth.uid == resource.data.borrowerId;
       }
 
-      allow read: if isLender() || isBorrower();
+      allow read: if lender() || borrower();
 
-      allow create: if isSignedIn()
+      allow create: if signedIn()
         && request.auth.uid == request.resource.data.lenderId
         && request.resource.data.borrowerId is string;
 
-      allow update: if isSignedIn() && (isLender() || isBorrower());
+      allow update: if lender() || borrower();
     }
 
     match /itemRequests/{docId} {
