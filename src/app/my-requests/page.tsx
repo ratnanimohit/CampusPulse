@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -18,9 +19,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, or } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { FileX } from 'lucide-react';
+import { FileX, Loader2 } from 'lucide-react';
+import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
 
 export type ItemRequest = {
   id: string;
@@ -30,9 +32,17 @@ export type ItemRequest = {
   requesterId: string;
 };
 
+export type Transaction = {
+  id: string;
+  itemId: string;
+  status: string;
+  handoverCodeHash: string;
+};
+
 export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [verifyingTransaction, setVerifyingTransaction] = useState<Transaction | null>(null);
 
   const requestsQuery = useMemoFirebase(
     () =>
@@ -43,81 +53,141 @@ export default function MyRequestsPage() {
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
+  const requestIds = useMemo(() => requests?.map(r => r.id) || [], [requests]);
+
+  const transactionsQuery = useMemoFirebase(
+    () => {
+      if (!firestore || requestIds.length === 0) return null;
+      return query(
+        collection(firestore, 'transactions'), 
+        where('itemId', 'in', requestIds)
+      );
+    }, 
+    [firestore, requestIds]
+  );
+  
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
   const cancelRequest = (id: string) => {
     if (!firestore) return;
     const requestDocRef = doc(firestore, 'itemRequests', id);
     deleteDocumentNonBlocking(requestDocRef);
   };
   
-  const isLoading = isUserLoading || isLoadingRequests;
+  const getTransactionForRequest = (requestId: string) => {
+    return transactions?.find(t => t.itemId === requestId);
+  }
+  
+  const isLoading = isUserLoading || isLoadingRequests || (requestIds.length > 0 && isLoadingTransactions);
+  
+  const handleVerifyDialogClose = () => {
+    setVerifyingTransaction(null);
+  };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
-        <CardDescription>
-          An overview of all your pending item requests.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <p>Loading your requests...</p>
-        ) : requests && requests.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Item</TableHead>
-                <TableHead>Urgency</TableHead>
-                <TableHead>Required By</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {requests.map(req => (
-                <TableRow key={req.id}>
-                  <TableCell className="font-medium">{req.itemName}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        req.urgency === 'emergency'
-                          ? 'destructive'
-                          : req.urgency === 'medium'
-                          ? 'secondary'
-                          : 'outline'
-                      }
-                    >
-                      {req.urgency.charAt(0).toUpperCase() +
-                        req.urgency.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(req.requiredBy).toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => cancelRequest(req.id)}
-                    >
-                      Cancel
-                    </Button>
-                  </TableCell>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
+          <CardDescription>
+            An overview of all your pending item requests.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : requests && requests.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Urgency</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex flex-col items-center justify-center gap-4 text-center py-20 border border-dashed rounded-lg">
-            <FileX className="h-12 w-12 text-muted-foreground" />
-            <h3 className="text-2xl font-bold tracking-tight font-headline">
-              You have no active requests
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Create a new request to see it here.
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </TableHeader>
+              <TableBody>
+                {requests.map(req => {
+                  const transaction = getTransactionForRequest(req.id);
+                  const status = transaction ? transaction.status : 'Pending';
+
+                  return (
+                    <TableRow key={req.id}>
+                      <TableCell className="font-medium">{req.itemName}</TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            req.urgency === 'emergency'
+                              ? 'destructive'
+                              : req.urgency === 'medium'
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                        >
+                          {req.urgency.charAt(0).toUpperCase() +
+                            req.urgency.slice(1)}
+                        </Badge>
+                      </TableCell>
+                       <TableCell>
+                        <Badge variant={transaction ? "secondary" : "outline"}>
+                            {status.replace(/_/g, ' ')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {!transaction && (
+                           <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => cancelRequest(req.id)}
+                            >
+                              Cancel
+                            </Button>
+                        )}
+                        {transaction?.status === 'HANDOVER_PENDING' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setVerifyingTransaction(transaction)}
+                            >
+                                Verify Handover
+                            </Button>
+                        )}
+                         {transaction && transaction.status !== 'HANDOVER_PENDING' && (
+                             <span className="text-sm text-muted-foreground">In Progress</span>
+                         )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-4 text-center py-20 border border-dashed rounded-lg">
+              <FileX className="h-12 w-12 text-muted-foreground" />
+              <h3 className="text-2xl font-bold tracking-tight font-headline">
+                You have no active requests
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Create a new request to see it here.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {verifyingTransaction && (
+          <VerifyHandoverDialog 
+            isOpen={!!verifyingTransaction}
+            onOpenChange={(isOpen) => {
+                if(!isOpen) {
+                    setVerifyingTransaction(null);
+                }
+            }}
+            transaction={verifyingTransaction}
+          />
+      )}
+    </>
   );
 }
