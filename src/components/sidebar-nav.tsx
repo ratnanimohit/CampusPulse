@@ -31,6 +31,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/locker', icon: Package, label: 'My Locker' },
     { href: '/requests', icon: PlusCircle, label: 'New Request' },
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
+    { href: '/transactions', icon: Repeat, label: 'Active Transactions' },
     { href: '/history', icon: History, label: 'History' },
     { href: '/profile', icon: Users, label: 'Profile' },
   ];
@@ -90,5 +91,3 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     </div>
   );
 }
-
-    

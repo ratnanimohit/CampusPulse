@@ -103,20 +103,16 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       };
       
-      // Await the document creation to prevent race condition
       await setDoc(transactionDocRef, transactionData);
   
       console.log("Transaction created with ID:", transactionDocRef.id);
 
       toast({
         title: 'Request Accepted!',
-        description: `Redirecting to complete the handover.`,
+        description: `Redirecting to your active transactions.`,
       });
       
-      // Add a small delay to ensure Firestore document is available on the next page
-      await new Promise(resolve => setTimeout(resolve, 300));
-  
-      router.push(`/transaction/${transactionDocRef.id}`);
+      router.push(`/transactions`);
   
     } catch (error) {
       console.error("Error fulfilling request: ", error);
@@ -389,5 +385,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
