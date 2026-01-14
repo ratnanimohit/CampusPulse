@@ -30,8 +30,6 @@ import {
   doc,
   serverTimestamp,
   or,
-  limit,
-  orderBy,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -53,6 +51,10 @@ type Transaction = {
     fulfillerId: string;
     requesterId: string;
     karma: number;
+    createdAt: {
+        seconds: number;
+        nanoseconds: number;
+    } | any;
 };
 
 
@@ -85,27 +87,36 @@ export default function Dashboard() {
   );
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
-  // Fetch all transactions for the user to calculate stats
-   const transactionsQuery = useMemoFirebase(() => {
+  // Fetch ALL transactions for the user to calculate stats accurately
+   const allTransactionsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return query(
       collection(firestore, 'transactions'),
       or(where('fulfillerId', '==', user.uid), where('requesterId', '==', user.uid)),
-      orderBy('createdAt', 'desc'),
-      limit(5)
     );
   }, [user, firestore]);
-  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+  const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(allTransactionsQuery);
 
   const stats = useMemo(() => {
-    if (!transactions) {
+    if (!allTransactions) {
       return { lent: 0, borrowed: 0, active: 0 };
     }
-    const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
-    const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
-    const active = transactions.filter(tx => tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
+    const lent = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
+    const borrowed = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
+    const active = allTransactions.filter(tx => tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
     return { lent, borrowed, active };
-  }, [transactions, user]);
+  }, [allTransactions, user]);
+  
+  // Create a separate memoized array for the recent transactions table
+  const recentTransactions = useMemo(() => {
+      if (!allTransactions) return [];
+      // Sort by date and take the first 5
+      return [...allTransactions].sort((a, b) => {
+          const dateA = a.createdAt?.seconds ?? 0;
+          const dateB = b.createdAt?.seconds ?? 0;
+          return dateB - dateA;
+      }).slice(0, 5);
+  }, [allTransactions]);
 
 
   const [isClient, setIsClient] = useState(false);
@@ -320,7 +331,7 @@ export default function Dashboard() {
                  <div className="flex items-center justify-center p-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : transactions && transactions.length > 0 ? (
+            ) : recentTransactions && recentTransactions.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -331,7 +342,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transactions.map(tx => (
+                  {recentTransactions.map(tx => (
                     <TableRow key={tx.id}>
                       <TableCell className="font-medium">{tx.itemName}</TableCell>
                       <TableCell>
@@ -436,5 +447,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
