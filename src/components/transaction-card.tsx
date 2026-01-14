@@ -4,14 +4,13 @@ import { useState } from 'react';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, CheckCircle, ShieldX, KeyRound } from 'lucide-react';
+import { Loader2, KeyRound } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
 import { doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
@@ -123,6 +122,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         updatedAt: serverTimestamp(),
       });
       if (transaction.itemId) {
+        // This is a fire-and-forget delete.
         deleteDoc(doc(firestore, 'itemRequests', transaction.itemId)).catch(console.error);
       }
       toast({ title: 'Handover Complete!', description: 'You now have the item.' });
@@ -157,7 +157,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         return <div className="text-center p-4 border-dashed border-2 rounded-lg">
             <p className="text-muted-foreground">Your handover code is:</p>
             <p className="text-4xl font-bold tracking-widest my-2">{generatedCode || '----'}</p>
-            <p className="text-muted-foreground">Waiting for requester to verify...</p>
+            <p className="text-xs text-muted-foreground">Share this with the requester. Waiting for them to verify...</p>
           </div>
       case 'ACTIVE':
         return <p className="text-center text-muted-foreground">Item is with the requester. Waiting for them to initiate return.</p>;
@@ -186,12 +186,16 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
              return <div className="text-center p-4 border-dashed border-2 rounded-lg">
                 <p className="text-muted-foreground">Your return code is:</p>
                 <p className="text-4xl font-bold tracking-widest my-2">{generatedCode}</p>
-                <p className="text-muted-foreground">Share this with the lender to complete the return.</p>
+                <p className="text-xs text-muted-foreground">Share this with the lender to complete the return.</p>
             </div>
         }
-        return <Button className="w-full" onClick={generateReturnCode} disabled={isProcessing}>Initiate Return</Button>;
+        return <Button className="w-full" onClick={generateReturnCode} disabled={isProcessing}>Initiate Return & Generate Code</Button>;
       case 'RETURN_PENDING':
-        return <p className="text-center text-muted-foreground">Waiting for lender to verify the return code.</p>;
+        return <div className="text-center p-4 border-dashed border-2 rounded-lg">
+                <p className="text-muted-foreground">Your return code is:</p>
+                <p className="text-4xl font-bold tracking-widest my-2">{generatedCode || '----'}</p>
+                <p className="text-xs text-muted-foreground">Waiting for lender to verify...</p>
+            </div>
       default: return null;
     }
   };
