@@ -358,7 +358,7 @@ export default function TransactionPage() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-full">
+      <div className="flex justify-center items-center h-screen">
         <Loader2 className="h-16 w-16 animate-spin" />
       </div>
     );
