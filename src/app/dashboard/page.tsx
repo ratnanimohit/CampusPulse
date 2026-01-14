@@ -85,7 +85,7 @@ export default function Dashboard() {
   
     try {
       const transactionsCol = collection(firestore, 'transactions');
-      const transactionDocRef = doc(transactionsCol); // Create a new doc ref with a generated ID
+      const transactionDocRef = doc(transactionsCol);
 
       const transactionData = {
         id: transactionDocRef.id,
@@ -108,10 +108,10 @@ export default function Dashboard() {
   
       toast({
         title: 'Request Accepted!',
-        description: `Proceed to the transaction page to complete the handover.`,
+        description: `Moving to the transactions page to complete the handover.`,
       });
   
-      router.push(`/transaction/${transactionDocRef.id}`);
+      router.push(`/transactions`);
   
     } catch (error) {
       console.error("Error fulfilling request: ", error);
@@ -383,5 +383,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
