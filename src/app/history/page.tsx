@@ -11,8 +11,8 @@ import { collection, query, where, orderBy } from "firebase/firestore";
 type Transaction = {
   id: string;
   itemName: string;
-  lenderId: string;
-  borrowerId: string;
+  fulfillerId: string;
+  requesterId: string;
   status: string;
   createdAt: {
     seconds: number;
@@ -31,7 +31,7 @@ export default function HistoryPage() {
         return query(
             collection(firestore, 'transactions'),
             where('status', '==', 'COMPLETED'),
-            where('lenderId', '==', user.uid)
+            where('fulfillerId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -40,7 +40,7 @@ export default function HistoryPage() {
         return query(
             collection(firestore, 'transactions'),
             where('status', '==', 'COMPLETED'),
-            where('borrowerId', '==', user.uid)
+            where('requesterId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -103,8 +103,8 @@ export default function HistoryPage() {
                                 <TableRow key={tx.id}>
                                     <TableCell className="font-medium">{tx.itemName}</TableCell>
                                     <TableCell>
-                                        <Badge variant={tx.lenderId === user?.uid ? 'secondary' : 'outline'}>
-                                            {tx.lenderId === user?.uid ? 'Lent' : 'Borrowed'}
+                                        <Badge variant={tx.fulfillerId === user?.uid ? 'secondary' : 'outline'}>
+                                            {tx.fulfillerId === user?.uid ? 'Lent' : 'Borrowed'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{getTransactionDate(tx.createdAt)}</TableCell>

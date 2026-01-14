@@ -8,15 +8,36 @@ service cloud.firestore {
         // Check the incoming request data on create, and the existing resource on update/delete
         let data = request.method == 'create' ? request.resource.data : resource.data;
         return request.auth != null &&
-          (request.auth.uid == data.lenderId ||
-           request.auth.uid == data.borrowerId);
+          (request.auth.uid == data.fulfillerId ||
+           request.auth.uid == data.requesterId);
       }
 
-      allow read: if isParticipant();
-      
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.lenderId;
+      allow get: if request.auth != null &&
+        (
+          request.auth.uid == resource.data.requesterId ||
+          request.auth.uid == resource.data.fulfillerId
+        );
 
-      allow update: if isParticipant();
+      allow list: if request.auth != null;
+
+      allow update: if request.auth != null &&
+        (
+          // fulfiller claiming the request
+          (
+            request.auth.uid != resource.data.requesterId &&
+            resource.data.fulfillerId == null &&
+            request.resource.data.fulfillerId == request.auth.uid
+          )
+
+          ||
+
+          // requester verifying code / completing
+          (
+            request.auth.uid == resource.data.requesterId
+          )
+        );
+      
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.fulfillerId;
       
       allow delete: if false; // Transactions should not be deletable for history.
     }

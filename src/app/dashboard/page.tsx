@@ -90,8 +90,8 @@ export default function Dashboard() {
 
       const transactionData = {
         id: transactionDocRef.id,
-        lenderId: user.uid,
-        borrowerId: request.requesterId,
+        fulfillerId: user.uid,
+        requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
         itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
@@ -384,5 +384,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    

@@ -21,8 +21,8 @@ import Image from 'next/image';
 
 export type Transaction = {
   id: string;
-  lenderId: string;
-  borrowerId: string;
+  fulfillerId: string;
+  requesterId: string;
   itemId: string;
   itemName: string;
   itemImageUrl: string;
@@ -91,8 +91,8 @@ export default function TransactionPage() {
     );
   }
 
-  const isLender = user?.uid === transaction.lenderId;
-  const isBorrower = user?.uid === transaction.borrowerId;
+  const isFulfiller = user?.uid === transaction.fulfillerId;
+  const isRequester = user?.uid === transaction.requesterId;
 
   return (
     <div className="max-w-md mx-auto">
@@ -107,15 +107,15 @@ export default function TransactionPage() {
               <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
                   <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item" />
               </div>
-              {isLender && <LenderView transaction={transaction} />}
-              {isBorrower && <BorrowerView transaction={transaction} />}
+              {isFulfiller && <LenderView transaction={transaction} />}
+              {isRequester && <BorrowerView transaction={transaction} />}
            </CardContent>
        </Card>
     </div>
   );
 }
 
-// Lender's View Component
+// Fulfiller's View Component
 function LenderView({ transaction }: { transaction: Transaction }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
@@ -137,7 +137,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         updatedAt: serverTimestamp(),
       });
       setGeneratedCode(code);
-      toast({ title: 'Code Generated', description: 'Share this code with the borrower.' });
+      toast({ title: 'Code Generated', description: 'Share this code with the requester.' });
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
@@ -197,13 +197,13 @@ function LenderView({ transaction }: { transaction: Transaction }) {
           <div className="text-center p-4 border-dashed border-2 rounded-lg">
             <p className="text-muted-foreground">Your handover code is:</p>
             <p className="text-4xl font-bold tracking-widest my-2">{generatedCode || '----'}</p>
-            <p className="text-muted-foreground">Waiting for borrower to verify...</p>
+            <p className="text-muted-foreground">Waiting for requester to verify...</p>
           </div>
         );
       case 'ACTIVE':
         return (
           <div className="text-center p-4 bg-secondary rounded-lg">
-            <p className="font-medium">Item is with the borrower.</p>
+            <p className="font-medium">Item is with the requester.</p>
             <p className="text-sm text-muted-foreground">Waiting for them to initiate the return.</p>
           </div>
         );
@@ -211,7 +211,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
          return (
             <div className="space-y-4">
               <p className="text-muted-foreground text-center">
-                Enter the 4-digit return code provided by the borrower.
+                Enter the 4-digit return code provided by the requester.
               </p>
               <Input
                 type="text"
@@ -263,7 +263,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   );
 }
 
-// Borrower's View Component
+// Requester's View Component
 function BorrowerView({ transaction }: { transaction: Transaction }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [handoverCodeInput, setHandoverCodeInput] = useState('');
@@ -312,7 +312,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
             updatedAt: serverTimestamp(),
         });
         setGeneratedReturnCode(code);
-        toast({ title: 'Return Initiated', description: 'Share the return code with the lender.' });
+        toast({ title: 'Return Initiated', description: 'Share the return code with the fulfiller.' });
     } catch(error: any) {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
@@ -328,7 +328,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
               <div className="text-center p-4">
                 <Loader2 className="animate-spin mx-auto text-muted-foreground" />
                 <p className="text-muted-foreground mt-2">
-                  Waiting for lender to generate handover code…
+                  Waiting for fulfiller to generate handover code…
                 </p>
               </div>
             );
@@ -336,7 +336,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         return (
             <div className="space-y-4">
                 <p className="text-muted-foreground text-center">
-                    Enter the 4-digit handover code from the lender.
+                    Enter the 4-digit handover code from the fulfiller.
                 </p>
                 <Input
                     type="text"
@@ -365,7 +365,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
                 <div className="text-center p-4 border-dashed border-2 rounded-lg">
                     <p className="text-muted-foreground">Your return code is:</p>
                     <p className="text-4xl font-bold tracking-widest my-2">{generatedReturnCode}</p>
-                    <p className="text-muted-foreground">Share this with the lender to complete the return.</p>
+                    <p className="text-muted-foreground">Share this with the fulfiller to complete the return.</p>
                 </div>
             );
         }
@@ -379,7 +379,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         return (
             <div className="text-center p-4 bg-secondary rounded-lg">
                 <p className="font-medium">Return Initiated</p>
-                <p className="text-sm text-muted-foreground">Waiting for lender to verify the return code.</p>
+                <p className="text-sm text-muted-foreground">Waiting for fulfiller to verify the return code.</p>
             </div>
         );
       case 'COMPLETED':
@@ -403,5 +403,3 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
 
   return <>{renderContent()}</>;
 }
-
-    
