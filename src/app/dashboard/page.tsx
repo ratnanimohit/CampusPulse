@@ -26,7 +26,9 @@ import {
   collection,
   query,
   where,
-  addDoc,
+  setDoc,
+  doc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -82,24 +84,27 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
   
     try {
-      // Create a new transaction document based on the item request
+      const transactionsCol = collection(firestore, 'transactions');
+      const transactionDocRef = doc(transactionsCol); // Create a new doc ref with a generated ID
+
       const transactionData = {
-        requesterId: request.requesterId,
-        fulfillerId: null, // Fulfiller is not set until they click "Fulfill"
-        itemId: request.id, 
+        id: transactionDocRef.id,
+        lenderId: user.uid,
+        borrowerId: request.requesterId,
+        itemId: request.id,
         itemName: request.itemName,
         itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
-        karma: 10,
-        status: 'requested', // Initial status
-        verificationCode: null,
-        codeVerified: false,
-        createdAt: new Date().toISOString(),
-        completedAt: null,
-        originalRequestId: request.id,
+        karma: 10, // Example karma
+        status: 'CREATED',
+        handoverCodeHash: null,
+        handoverVerified: false,
+        returnCodeHash: null,
+        returnVerified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       };
-  
-      const transactionsCol = collection(firestore, 'transactions');
-      const transactionDocRef = await addDoc(transactionsCol, transactionData);
+      
+      await setDoc(transactionDocRef, transactionData);
   
       toast({
         title: 'Request Accepted!',
@@ -113,7 +118,7 @@ export default function Dashboard() {
       toast({
         variant: 'destructive',
         title: 'Fulfillment Failed',
-        description: 'Could not start the transaction process.',
+        description: 'Could not start the transaction process. Please check permissions.',
       });
     } finally {
       setIsFulfilling(null);
@@ -378,3 +383,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
