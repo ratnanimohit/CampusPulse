@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -20,7 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { PlusCircle, FileX, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import {
   collection,
@@ -29,6 +29,9 @@ import {
   setDoc,
   doc,
   serverTimestamp,
+  or,
+  limit,
+  orderBy,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
@@ -39,7 +42,19 @@ type ItemRequest = {
   requesterId: string;
 };
 
-const transactions: any[] = [];
+type UserProfile = {
+    karmaPoints: number;
+};
+
+type Transaction = {
+    id: string;
+    itemName: string;
+    status: string;
+    fulfillerId: string;
+    requesterId: string;
+    karma: number;
+};
+
 
 // A simple delay function
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -53,12 +68,45 @@ export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
 
+  // Fetch community requests
   const requestsQuery = useMemoFirebase(
-    () => firestore && query(collection(firestore, 'itemRequests')),
-    [firestore]
+    () => firestore && query(
+        collection(firestore, 'itemRequests'), 
+        where('requesterId', '!=', user?.uid || '')
+    ),
+    [firestore, user]
   );
-
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+
+  // Fetch user profile for karma points
+   const userProfileRef = useMemoFirebase(
+    () => (user && firestore ? doc(firestore, 'userProfiles', user.uid) : null),
+    [user, firestore]
+  );
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  // Fetch all transactions for the user to calculate stats
+   const transactionsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(
+      collection(firestore, 'transactions'),
+      or(where('fulfillerId', '==', user.uid), where('requesterId', '==', user.uid)),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    );
+  }, [user, firestore]);
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+
+  const stats = useMemo(() => {
+    if (!transactions) {
+      return { lent: 0, borrowed: 0, active: 0 };
+    }
+    const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
+    const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
+    const active = transactions.filter(tx => tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
+    return { lent, borrowed, active };
+  }, [transactions, user]);
+
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
@@ -107,11 +155,10 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       };
       
-      // IMPORTANT: Await the creation and add a delay to prevent race condition
       await setDoc(transactionDocRef, transactionData);
       console.log("Transaction created with ID:", transactionDocRef.id);
 
-      await delay(300); // Give firestore a moment
+      await delay(300);
   
       toast({
         title: 'Request Accepted!',
@@ -134,8 +181,6 @@ export default function Dashboard() {
   if (!isClient) {
     return null; // Or a loading spinner
   }
-
-  const communityRequests = requests?.filter(req => req.requesterId !== user?.uid);
 
   return (
     <div className="flex flex-col gap-8">
@@ -180,8 +225,8 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No activity yet</p>
+            <div className="text-2xl font-bold">{userProfile?.karmaPoints ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Your community score</p>
           </CardContent>
         </Card>
         <Card>
@@ -204,8 +249,8 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">No items lent yet</p>
+            <div className="text-2xl font-bold">{stats.lent}</div>
+             <p className="text-xs text-muted-foreground">Completed rentals</p>
           </CardContent>
         </Card>
         <Card>
@@ -229,9 +274,9 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.borrowed}</div>
             <p className="text-xs text-muted-foreground">
-              No items borrowed yet
+              Completed rentals
             </p>
           </CardContent>
         </Card>
@@ -254,9 +299,9 @@ export default function Dashboard() {
             </svg>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.active}</div>
             <p className="text-xs text-muted-foreground">
-              No active transactions
+              Ongoing rentals
             </p>
           </CardContent>
         </Card>
@@ -271,13 +316,16 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {transactions.length > 0 ? (
+            {isLoadingTransactions ? (
+                 <div className="flex items-center justify-center p-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : transactions && transactions.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead className="hidden sm:table-cell">User</TableHead>
-                    <TableHead className="hidden md:table-cell">Type</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Karma</TableHead>
                   </TableRow>
@@ -285,19 +333,16 @@ export default function Dashboard() {
                 <TableBody>
                   {transactions.map(tx => (
                     <TableRow key={tx.id}>
-                      <TableCell className="font-medium">{tx.item}</TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        {tx.user}
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="font-medium">{tx.itemName}</TableCell>
+                      <TableCell>
                         <Badge
-                          variant={tx.type === 'Lent' ? 'secondary' : 'outline'}
+                          variant={tx.fulfillerId === user?.uid ? 'secondary' : 'outline'}
                         >
-                          {tx.type}
+                          {tx.fulfillerId === user?.uid ? 'Lent' : 'Borrowed'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{tx.status}</Badge>
+                        <Badge variant="outline">{tx.status.replace(/_/g, ' ')}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-green-600 font-medium">
                         {tx.karma}
@@ -333,7 +378,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-center p-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : communityRequests && communityRequests.length > 0 ? (
+            ) : requests && requests.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -343,7 +388,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {communityRequests.slice(0, 3).map(req => (
+                  {requests.slice(0, 3).map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">
                         {req.itemName}
@@ -391,3 +436,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
