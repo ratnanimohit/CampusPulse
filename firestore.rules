@@ -5,9 +5,11 @@ service cloud.firestore {
     match /transactions/{transactionId} {
 
       function isParticipant() {
+        // Check the incoming request data on create, and the existing resource on update/delete
+        let data = request.method == 'create' ? request.resource.data : resource.data;
         return request.auth != null &&
-          (request.auth.uid == resource.data.lenderId ||
-           request.auth.uid == resource.data.borrowerId);
+          (request.auth.uid == data.lenderId ||
+           request.auth.uid == data.borrowerId);
       }
 
       allow read: if isParticipant();

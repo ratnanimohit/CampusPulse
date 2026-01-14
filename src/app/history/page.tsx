@@ -11,8 +11,8 @@ import { collection, query, where, orderBy } from "firebase/firestore";
 type Transaction = {
   id: string;
   itemName: string;
-  fulfillerId: string;
-  requesterId: string;
+  lenderId: string;
+  borrowerId: string;
   status: string;
   createdAt: {
     seconds: number;
@@ -30,8 +30,8 @@ export default function HistoryPage() {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            where('status', '==', 'completed'),
-            where('fulfillerId', '==', user.uid)
+            where('status', '==', 'COMPLETED'),
+            where('lenderId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -39,8 +39,8 @@ export default function HistoryPage() {
         if (!user || !firestore) return null;
         return query(
             collection(firestore, 'transactions'),
-            where('status', '==', 'completed'),
-            where('requesterId', '==', user.uid)
+            where('status', '==', 'COMPLETED'),
+            where('borrowerId', '==', user.uid)
         );
     }, [user, firestore]);
 
@@ -103,8 +103,8 @@ export default function HistoryPage() {
                                 <TableRow key={tx.id}>
                                     <TableCell className="font-medium">{tx.itemName}</TableCell>
                                     <TableCell>
-                                        <Badge variant={tx.fulfillerId === user?.uid ? 'secondary' : 'outline'}>
-                                            {tx.fulfillerId === user?.uid ? 'Lent' : 'Borrowed'}
+                                        <Badge variant={tx.lenderId === user?.uid ? 'secondary' : 'outline'}>
+                                            {tx.lenderId === user?.uid ? 'Lent' : 'Borrowed'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{getTransactionDate(tx.createdAt)}</TableCell>
