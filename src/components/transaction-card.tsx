@@ -191,7 +191,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
         }
         return <Button className="w-full" onClick={generateReturnCode} disabled={isProcessing}>Initiate Return & Generate Code</Button>;
       case 'RETURN_PENDING':
-        return <div className="text-center p-4 border-dashed border-2 rounded-lg">
+         return <div className="text-center p-4 border-dashed border-2 rounded-lg">
                 <p className="text-muted-foreground">Your return code is:</p>
                 <p className="text-4xl font-bold tracking-widest my-2">{generatedCode || '----'}</p>
                 <p className="text-xs text-muted-foreground">Waiting for lender to verify...</p>
