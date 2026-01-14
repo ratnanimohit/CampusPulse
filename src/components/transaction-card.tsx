@@ -52,7 +52,7 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   const userRole = user?.uid === transaction.fulfillerId ? 'Lender' : 'Borrower';
 
   return (
-    <Card className="flex flex-col h-full transition-all hover:shadow-md">
+    <Card className="flex flex-col h-full w-full transition-all hover:shadow-md">
       <CardHeader>
         <div className="relative w-full h-40 rounded-lg overflow-hidden mb-2">
            <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item"/>

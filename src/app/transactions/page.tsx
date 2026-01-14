@@ -3,10 +3,11 @@
 import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, or, and } from 'firebase/firestore';
-import { TransactionCard, type Transaction } from '@/components/transaction-card';
+import { TransactionCard } from '@/components/transaction-card';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileX, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import type { Transaction } from '@/components/transaction-card';
 
 export default function TransactionsPage() {
   const { user, isUserLoading } = useUser();
@@ -15,6 +16,9 @@ export default function TransactionsPage() {
   const transactionsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     
+    // This query now explicitly looks for statuses that represent an active transaction.
+    const activeStatuses = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING'];
+
     return query(
       collection(firestore, 'transactions'),
       and(
@@ -22,7 +26,7 @@ export default function TransactionsPage() {
           where('fulfillerId', '==', user.uid),
           where('requesterId', '==', user.uid)
         ),
-        where('status', 'not-in', ['COMPLETED', 'CANCELLED'])
+        where('status', 'in', activeStatuses)
       )
     );
   }, [user, firestore]);
@@ -47,7 +51,7 @@ export default function TransactionsPage() {
       ) : transactions && transactions.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {transactions.map(tx => (
-            <Link href={`/transaction/${tx.id}`} key={tx.id}>
+            <Link href={`/transaction/${tx.id}`} key={tx.id} className="flex">
               <TransactionCard transaction={tx} />
             </Link>
           ))}
