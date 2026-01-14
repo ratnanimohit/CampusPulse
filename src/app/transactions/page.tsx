@@ -16,8 +16,7 @@ export default function TransactionsPage() {
                 collection(firestore, 'transactions'),
                 and(
                     or(where('lenderId', '==', user.uid), where('borrowerId', '==', user.uid)),
-                    where('status', '!=', 'COMPLETED'),
-                    where('status', '!=', 'CANCELLED')
+                    where('status', 'not-in', ['COMPLETED', 'CANCELLED'])
                 )
             ) : null,
         [user, firestore]
