@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, or } from 'firebase/firestore';
+import { collection, query, where, or, and } from 'firebase/firestore';
 import { TransactionCard, type Transaction } from '@/components/transaction-card';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileX, Loader2 } from 'lucide-react';
@@ -18,11 +18,13 @@ export default function TransactionsPage() {
     // and the status is not 'COMPLETED' or 'CANCELLED'.
     return query(
       collection(firestore, 'transactions'),
-      or(
-        where('fulfillerId', '==', user.uid),
-        where('requesterId', '==', user.uid)
-      ),
-      where('status', 'not-in', ['COMPLETED', 'CANCELLED'])
+      and(
+        or(
+          where('fulfillerId', '==', user.uid),
+          where('requesterId', '==', user.uid)
+        ),
+        where('status', 'not-in', ['COMPLETED', 'CANCELLED'])
+      )
     );
   }, [user, firestore]);
 
