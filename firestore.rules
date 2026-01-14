@@ -4,71 +4,29 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
 
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isLender() {
-        return request.auth.uid == resource.data.lenderId;
+        return isSignedIn()
+          && resource.data.lenderId is string
+          && request.auth.uid == resource.data.lenderId;
       }
 
       function isBorrower() {
-        return request.auth.uid == resource.data.borrowerId;
+        return isSignedIn()
+          && resource.data.borrowerId is string
+          && request.auth.uid == resource.data.borrowerId;
       }
 
-      function isParticipant() {
-        return isLender() || isBorrower();
-      }
+      allow read: if isLender() || isBorrower();
 
-      // READ: both lender & borrower
-      allow read: if request.auth != null && isParticipant();
-
-      // CREATE: lender only
-      allow create: if request.auth != null
+      allow create: if isSignedIn()
         && request.auth.uid == request.resource.data.lenderId
-        && request.resource.data.borrowerId != null;
+        && request.resource.data.borrowerId is string;
 
-      // UPDATE rules
-      allow update: if request.auth != null && (
-        
-        // LENDER: generate handover code
-        (
-          isLender()
-          && resource.data.status == "CREATED"
-          && request.resource.data.status == "HANDOVER_PENDING"
-        )
-
-        ||
-
-        // BORROWER: verify handover & generate return code
-        (
-          isBorrower()
-          && resource.data.status == "HANDOVER_PENDING"
-          && request.resource.data.status == "ACTIVE"
-        )
-
-        ||
-
-        // BORROWER: generate return code
-        (
-          isBorrower()
-          && resource.data.status == "ACTIVE"
-          && request.resource.data.status == "RETURN_PENDING"
-        )
-
-        ||
-
-        // LENDER: verify return
-        (
-          isLender()
-          && resource.data.status == "RETURN_PENDING"
-          && request.resource.data.status == "COMPLETED"
-        )
-        
-        ||
-
-        // ANY PARTICIPANT: cancel
-        (
-          isParticipant()
-          && request.resource.data.status == "CANCELLED"
-        )
-      );
+      allow update: if isSignedIn() && (isLender() || isBorrower());
     }
 
     match /itemRequests/{docId} {
@@ -84,5 +42,3 @@ service cloud.firestore {
     }
   }
 }
-
-    
