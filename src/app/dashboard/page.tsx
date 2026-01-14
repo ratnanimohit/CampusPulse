@@ -41,6 +41,10 @@ type ItemRequest = {
 
 const transactions: any[] = [];
 
+// A simple delay function
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+
 export default function Dashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -103,16 +107,18 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       };
       
+      // IMPORTANT: Await the creation and add a delay to prevent race condition
       await setDoc(transactionDocRef, transactionData);
-  
       console.log("Transaction created with ID:", transactionDocRef.id);
 
+      await delay(300); // Give firestore a moment
+  
       toast({
         title: 'Request Accepted!',
-        description: `Redirecting to your active transactions.`,
+        description: `Redirecting to the transaction page.`,
       });
       
-      router.push(`/transactions`);
+      router.push(`/transaction/${transactionDocRef.id}`);
   
     } catch (error) {
       console.error("Error fulfilling request: ", error);
