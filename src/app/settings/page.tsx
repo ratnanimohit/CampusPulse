@@ -1,17 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { collection, query, where, getDocs, writeBatch, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, writeBatch, doc, updateDoc } from 'firebase/firestore';
 import { Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+
+type UserProfile = {
+    firstName: string;
+    lastName: string;
+};
 
 
 export default function SettingsPage() {
@@ -19,53 +25,76 @@ export default function SettingsPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // State for user profile information
     const [name, setName] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     
-    // State for notification preferences
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(false);
     const [isClient, setIsClient] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    const userProfileRef = useMemoFirebase(
+        () => (user && firestore ? doc(firestore, 'userProfiles', user.uid) : null),
+        [user, firestore]
+    );
+    const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+
 
     useEffect(() => {
         setIsClient(true);
-    }, []);
-
-    // Load settings from localStorage on initial render
-    useEffect(() => {
-        if (isClient) {
-            const savedSettings = localStorage.getItem('userSettings');
-            const defaultName = user?.displayName || '';
-            if (savedSettings) {
-                try {
-                    const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
-                    setName(name || defaultName);
-                    if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
-                    if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
-                } catch (e) {
-                    setName(defaultName);
-                }
-            } else if (user?.displayName) {
-                setName(user.displayName);
+        // Load notification settings from localStorage
+        const savedSettings = localStorage.getItem('userSettings');
+        if (savedSettings) {
+            try {
+                const { emailNotifications, pushNotifications } = JSON.parse(savedSettings);
+                if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
+                if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
+            } catch (e) {
+                // ignore parsing errors
             }
         }
-    }, [user, isClient]);
+    }, []);
 
-    // Save settings to localStorage whenever they change
+    useEffect(() => {
+        // Pre-fill name from Firestore profile
+        if (userProfile) {
+            setName(`${userProfile.firstName} ${userProfile.lastName}`);
+        }
+    }, [userProfile]);
+
+    // Save notification settings to localStorage whenever they change
     useEffect(() => {
         if (isClient) {
-            const settings = { name, emailNotifications, pushNotifications };
+            const settings = { emailNotifications, pushNotifications };
             localStorage.setItem('userSettings', JSON.stringify(settings));
         }
-    }, [name, emailNotifications, pushNotifications, isClient]);
+    }, [emailNotifications, pushNotifications, isClient]);
 
-    const handleSaveChanges = () => {
+    const handleSaveChanges = async () => {
+        setIsSaving(true);
+        // Save Profile Info
+        if (userProfileRef) {
+            const nameParts = name.split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.slice(1).join(' ') || '';
+            try {
+                await updateDoc(userProfileRef, { firstName, lastName });
+            } catch(e: any) {
+                 toast({
+                    variant: 'destructive',
+                    title: "Error Saving Profile",
+                    description: e.message || "Could not update your name.",
+                });
+            }
+        }
+        
+        // You could also save notification settings to Firestore here if needed
+
         toast({
             title: "Settings Saved",
             description: "Your changes have been saved successfully.",
         });
+        setIsSaving(false);
     };
 
     const handleClearActiveTransactions = async () => {
@@ -110,8 +139,12 @@ export default function SettingsPage() {
     };
 
 
-    if (!isClient) {
-        return <div>Loading...</div>; // Or a skeleton loader
+    if (!isClient || isLoadingProfile) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-16 w-16 animate-spin" />
+            </div>
+        );
     }
 
     return (
@@ -121,7 +154,10 @@ export default function SettingsPage() {
                     <h1 className="text-3xl font-bold font-headline">Settings</h1>
                     <p className="text-muted-foreground">Manage your account and notification settings.</p>
                 </div>
-                <Button onClick={handleSaveChanges}>Save Changes</Button>
+                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                    {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                </Button>
             </div>
             
             <Card>
@@ -132,7 +168,7 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isSaving} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>

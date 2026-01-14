@@ -2,11 +2,10 @@
 
 import { useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, or, where } from 'firebase/firestore';
-import { Edit, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type UserProfile = {
     karmaPoints: number;
@@ -50,7 +49,11 @@ export default function ProfilePage() {
         const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user.uid).length;
         const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user.uid).length;
         const activeStatuses = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING'];
-        const active = transactions.filter(tx => (tx.fulfillerId === user.uid || tx.requesterId === user.uid) && activeStatuses.includes(tx.status)).length;
+        const active = transactions.filter(
+            (tx) =>
+              (tx.fulfillerId === user.uid || tx.requesterId === user.uid) &&
+              activeStatuses.includes(tx.status)
+        ).length;
         const total = lent + borrowed;
         return { lent, borrowed, active, total };
     }, [transactions, user]);
@@ -102,10 +105,6 @@ export default function ProfilePage() {
                                 <CardDescription>Joined: {creationTime}</CardDescription>
                             </div>
                         </div>
-                        <Button variant="outline" size="icon">
-                            <Edit className="h-4 w-4"/>
-                            <span className="sr-only">Edit Profile</span>
-                        </Button>
                     </div>
                 </CardHeader>
             </Card>
