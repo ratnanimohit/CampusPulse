@@ -8,6 +8,8 @@ import {
   updateDoc,
   serverTimestamp,
   deleteDoc,
+  writeBatch,
+  increment,
 } from 'firebase/firestore';
 import { simpleHash } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -93,20 +95,35 @@ function LenderView({ transaction }: { transaction: Transaction }) {
     }
     setIsProcessing(true);
     try {
-      await updateDoc(transactionDocRef, {
+      const batch = writeBatch(firestore);
+
+      // 1. Update the transaction status
+      batch.update(transactionDocRef, {
         returnVerified: true,
         status: 'COMPLETED',
         updatedAt: serverTimestamp(),
       });
+
+      // 2. Update lender's karma
+      const lenderProfileRef = doc(firestore, 'userProfiles', transaction.fulfillerId);
+      batch.update(lenderProfileRef, { karmaPoints: increment(transaction.karma) });
+      
+      // 3. Update requester's karma
+      const requesterProfileRef = doc(firestore, 'userProfiles', transaction.requesterId);
+      batch.update(requesterProfileRef, { karmaPoints: increment(transaction.karma) });
+
+      await batch.commit();
+
       toast({
         title: 'Transaction Completed!',
-        description: `${transaction.karma} karma awarded.`,
+        description: `${transaction.karma} karma awarded to both users.`,
       });
     } catch (error: any) {
+      console.error("Error completing transaction:", error);
       toast({
         variant: 'destructive',
         title: 'Error',
-        description: error.message,
+        description: "Could not complete transaction. " + error.message,
       });
     }
     setIsProcessing(false);
