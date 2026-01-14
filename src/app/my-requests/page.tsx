@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, or } from 'firebase/firestore';
+import { collection, query, where, doc, or, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { FileX, Loader2 } from 'lucide-react';
 import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
@@ -68,10 +68,20 @@ export default function MyRequestsPage() {
   
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  const cancelRequest = (id: string) => {
+  const cancelRequest = (requestId: string, transactionId?: string) => {
     if (!firestore) return;
-    const requestDocRef = doc(firestore, 'itemRequests', id);
+    // Always delete the original request
+    const requestDocRef = doc(firestore, 'itemRequests', requestId);
     deleteDocumentNonBlocking(requestDocRef);
+
+    // If a transaction has started, cancel it instead of just deleting the request
+    if (transactionId) {
+      const transactionDocRef = doc(firestore, 'transactions', transactionId);
+      updateDoc(transactionDocRef, {
+        status: 'CANCELLED',
+        updatedAt: serverTimestamp(),
+      });
+    }
   };
   
   const getTransactionForRequest = (requestId: string) => {
@@ -112,6 +122,7 @@ export default function MyRequestsPage() {
                 {requests.map(req => {
                   const transaction = getTransactionForRequest(req.id);
                   const status = transaction ? transaction.status : 'Pending';
+                  const isCancellable = status === 'Pending' || status === 'CREATED' || status === 'HANDOVER_PENDING';
 
                   return (
                     <TableRow key={req.id}>
@@ -135,16 +146,7 @@ export default function MyRequestsPage() {
                             {status.replace(/_/g, ' ')}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">
-                        {!transaction && (
-                           <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => cancelRequest(req.id)}
-                            >
-                              Cancel
-                            </Button>
-                        )}
+                      <TableCell className="text-right space-x-2">
                         {transaction?.status === 'HANDOVER_PENDING' && (
                             <Button
                                 variant="outline"
@@ -154,8 +156,17 @@ export default function MyRequestsPage() {
                                 Verify Handover
                             </Button>
                         )}
-                         {transaction && transaction.status !== 'HANDOVER_PENDING' && (
-                             <span className="text-sm text-muted-foreground">In Progress</span>
+                        {isCancellable && (
+                           <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => cancelRequest(req.id, transaction?.id)}
+                            >
+                              Cancel
+                            </Button>
+                        )}
+                         {transaction && !isCancellable && (
+                             <span className="text-sm text-muted-foreground px-3">In Progress</span>
                          )}
                       </TableCell>
                     </TableRow>
