@@ -44,12 +44,12 @@ export default function ProfilePage() {
     const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
     const stats = useMemo(() => {
-        if (!transactions) {
+        if (!transactions || !user) {
             return { lent: 0, borrowed: 0, active: 0, total: 0 };
         }
-        const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
-        const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
-        const active = transactions.filter(tx => tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
+        const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user.uid).length;
+        const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user.uid).length;
+        const active = transactions.filter(tx => (tx.fulfillerId === user.uid || tx.requesterId === user.uid) && tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
         const total = lent + borrowed;
         return { lent, borrowed, active, total };
     }, [transactions, user]);
@@ -155,5 +155,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-    

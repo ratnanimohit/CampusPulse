@@ -98,14 +98,14 @@ export default function Dashboard() {
   const { data: allTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(allTransactionsQuery);
 
   const stats = useMemo(() => {
-    if (!allTransactions) {
+    if (!allTransactions || !user) {
       return { lent: 0, borrowed: 0, active: 0 };
     }
-    const lent = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user?.uid).length;
-    const borrowed = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user?.uid).length;
+    const lent = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user.uid).length;
+    const borrowed = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user.uid).length;
     const active = allTransactions.filter(
         (tx) =>
-          (tx.fulfillerId === user?.uid || tx.requesterId === user?.uid) &&
+          (tx.fulfillerId === user.uid || tx.requesterId === user.uid) &&
           tx.status !== 'COMPLETED' &&
           tx.status !== 'CANCELLED'
       ).length;
@@ -452,5 +452,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
