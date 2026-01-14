@@ -31,13 +31,12 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/locker', icon: Package, label: 'My Locker' },
     { href: '/requests', icon: PlusCircle, label: 'New Request' },
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
-    { href: '/transactions', icon: Repeat, label: 'Active Transactions'},
     { href: '/history', icon: History, label: 'History' },
     { href: '/profile', icon: Users, label: 'Profile' },
   ];
 
   const isActive = (href: string) => {
-    return pathname === href;
+    return pathname.startsWith(href);
   }
 
   const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: () => void }) => (
@@ -91,3 +90,5 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     </div>
   );
 }
+
+    

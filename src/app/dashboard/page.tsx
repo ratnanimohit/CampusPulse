@@ -31,6 +31,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -82,7 +83,7 @@ export default function Dashboard() {
   const fulfillRequest = async (request: ItemRequest) => {
     if (!firestore || !user) return;
     setIsFulfilling(request.id);
-  
+
     try {
       const transactionsCol = collection(firestore, 'transactions');
       const transactionDocRef = doc(transactionsCol);
@@ -104,25 +105,25 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       };
       
-      await setDoc(transactionDocRef, transactionData);
+      // Use addDocumentNonBlocking to avoid awaiting and potential UI block
+      addDocumentNonBlocking(transactionsCol, transactionData);
   
       toast({
         title: 'Request Accepted!',
-        description: `Moving to the transactions page to complete the handover.`,
+        description: `Redirecting to complete the handover.`,
       });
   
-      router.push(`/transactions`);
+      router.push(`/transaction/${transactionDocRef.id}`);
   
     } catch (error) {
       console.error("Error fulfilling request: ", error);
       toast({
         variant: 'destructive',
         title: 'Fulfillment Failed',
-        description: 'Could not start the transaction process. Please check permissions.',
+        description: 'Could not start the transaction process.',
       });
-    } finally {
-      setIsFulfilling(null);
-    }
+       setIsFulfilling(null);
+    } 
   };
 
   if (!isClient) {
@@ -383,3 +384,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
