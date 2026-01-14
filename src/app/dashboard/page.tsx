@@ -103,11 +103,11 @@ export default function Dashboard() {
     }
     const lent = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user.uid).length;
     const borrowed = allTransactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user.uid).length;
+    const activeStatuses = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING'];
     const active = allTransactions.filter(
         (tx) =>
           (tx.fulfillerId === user.uid || tx.requesterId === user.uid) &&
-          tx.status !== 'COMPLETED' &&
-          tx.status !== 'CANCELLED'
+          activeStatuses.includes(tx.status)
       ).length;
     return { lent, borrowed, active };
   }, [allTransactions, user]);

@@ -49,7 +49,8 @@ export default function ProfilePage() {
         }
         const lent = transactions.filter(tx => tx.status === 'COMPLETED' && tx.fulfillerId === user.uid).length;
         const borrowed = transactions.filter(tx => tx.status === 'COMPLETED' && tx.requesterId === user.uid).length;
-        const active = transactions.filter(tx => (tx.fulfillerId === user.uid || tx.requesterId === user.uid) && tx.status !== 'COMPLETED' && tx.status !== 'CANCELLED').length;
+        const activeStatuses = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING'];
+        const active = transactions.filter(tx => (tx.fulfillerId === user.uid || tx.requesterId === user.uid) && activeStatuses.includes(tx.status)).length;
         const total = lent + borrowed;
         return { lent, borrowed, active, total };
     }, [transactions, user]);
