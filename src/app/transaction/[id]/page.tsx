@@ -46,6 +46,10 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
     const { toast } = useToast();
 
     const generateHandoverCode = async () => {
+        if (transaction.status !== 'CREATED') {
+            toast({ variant: 'destructive', title: 'Invalid Action', description: 'Handover code can only be generated for a new transaction.' });
+            return;
+        }
         setIsProcessing(true);
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         setHandoverCode(code);
@@ -64,28 +68,32 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
     };
 
     const verifyReturnCode = async () => {
-      if (returnCodeInput.length !== 4) {
-          toast({ variant: 'destructive', title: "Invalid Code", description: "Please enter a 4-digit code." });
-          return;
-      }
-      setIsProcessing(true);
-      if (simpleHash(returnCodeInput) === transaction.returnCodeHash) {
-          try {
-              await updateDoc(transactionDocRef, {
-                  returnVerified: true,
-                  status: 'COMPLETED',
-                  updatedAt: serverTimestamp()
-              });
-              toast({ title: "Success!", description: "Return verified. Transaction completed." });
-          } catch (error) {
-              console.error("Verification error:", error);
-              toast({ variant: 'destructive', title: "Error", description: "Could not complete transaction." });
-          }
-      } else {
-          toast({ variant: 'destructive', title: "Invalid Code", description: "The code does not match." });
-      }
-      setIsProcessing(false);
-  };
+        if (transaction.status !== 'RETURN_PENDING') {
+            toast({ variant: 'destructive', title: 'Invalid State', description: 'Cannot verify return at this stage.' });
+            return;
+        }
+        if (returnCodeInput.length !== 4) {
+            toast({ variant: 'destructive', title: "Invalid Code", description: "Please enter a 4-digit code." });
+            return;
+        }
+        setIsProcessing(true);
+        if (simpleHash(returnCodeInput) === transaction.returnCodeHash) {
+            try {
+                await updateDoc(transactionDocRef, {
+                    returnVerified: true,
+                    status: 'COMPLETED',
+                    updatedAt: serverTimestamp()
+                });
+                toast({ title: "Success!", description: "Return verified. Transaction completed." });
+            } catch (error) {
+                console.error("Verification error:", error);
+                toast({ variant: 'destructive', title: "Error", description: "Could not complete transaction." });
+            }
+        } else {
+            toast({ variant: 'destructive', title: "Invalid Code", description: "The code does not match." });
+        }
+        setIsProcessing(false);
+    };
 
 
     switch (transaction.status) {
@@ -160,6 +168,10 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
     const { toast } = useToast();
 
     const verifyHandoverCode = async () => {
+        if (transaction.status !== 'HANDOVER_PENDING') {
+            toast({ variant: 'destructive', title: 'Invalid State', description: 'Cannot verify handover at this stage.'});
+            return;
+        }
         if (handoverCodeInput.length !== 4) {
             toast({ variant: 'destructive', title: "Invalid Code", description: "Please enter a 4-digit code." });
             return;
@@ -187,6 +199,10 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
     };
 
     const generateReturnCode = async () => {
+        if (transaction.status !== 'ACTIVE') {
+            toast({ variant: 'destructive', title: 'Invalid State', description: 'Cannot initiate a return for a non-active transaction.' });
+            return;
+        }
         setIsProcessing(true);
         const code = Math.floor(1000 + Math.random() * 9000).toString();
         setReturnCode(code);
@@ -207,13 +223,23 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
     switch (transaction.status) {
         case 'CREATED':
         case 'HANDOVER_PENDING':
-            if (transaction.handoverCodeHash) {
-              return (
+            if (!transaction.handoverCodeHash) {
+                return (
+                    <CardContent className="text-center p-6">
+                        <Loader2 className="animate-spin mx-auto h-8 w-8 text-muted-foreground" />
+                        <p className="text-muted-foreground mt-2">
+                        Waiting for lender to generate handover code…
+                        </p>
+                    </CardContent>
+                );
+            }
+            return (
                   <CardContent className="w-full space-y-4">
                       <p className="text-muted-foreground text-center">Enter the 4-digit code from the lender to receive the item.</p>
                       <Input
                           type="text"
-                          placeholder="Enter handover code"
+                          inputMode="numeric"
+                          placeholder="••••"
                           value={handoverCodeInput}
                           onChange={(e) => setHandoverCodeInput(e.target.value.replace(/\D/g, ''))}
                           maxLength={4}
@@ -225,13 +251,6 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
                           Verify Handover
                       </Button>
                   </CardContent>
-              );
-            }
-            return (
-                 <CardContent className="flex flex-col items-center gap-4 text-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-muted-foreground">Waiting for the lender to generate a handover code.</p>
-                </CardContent>
             );
         case 'ACTIVE':
             return (
@@ -270,15 +289,16 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
 
 
 export default function TransactionPage() {
-    const { id: transactionId } = useParams();
+    const params = useParams();
+    const transactionId = params.id;
     const firestore = useFirestore();
     const { user, isUserLoading } = useUser();
     const router = useRouter();
     const { toast } = useToast();
 
     const transactionDocRef = useMemoFirebase(
-        () => firestore && transactionId ? doc(firestore, 'transactions', transactionId as string) : null,
-        [firestore, transactionId]
+        () => (firestore && transactionId && !isUserLoading && user) ? doc(firestore, 'transactions', transactionId as string) : null,
+        [firestore, transactionId, isUserLoading, user]
     );
 
     const { data: transaction, isLoading } = useDoc<Transaction>(transactionDocRef);
@@ -301,7 +321,7 @@ export default function TransactionPage() {
 
         if (!transaction || transaction.status === 'CANCELLED') {
             return (
-                <CardContent className="text-center">
+                <CardContent className="text-center p-6">
                     <Alert variant="destructive">
                         <Info className="h-4 w-4" />
                         <AlertTitle>Transaction Not Found or Cancelled</AlertTitle>
@@ -321,7 +341,7 @@ export default function TransactionPage() {
         
         // User is not part of this transaction
         return (
-            <CardContent className="text-center">
+            <CardContent className="text-center p-6">
                 <Alert variant="destructive">
                     <ShieldX className="h-4 w-4" />
                     <AlertTitle>Access Denied</AlertTitle>
@@ -351,7 +371,7 @@ export default function TransactionPage() {
                     </CardDescription>
                 </CardHeader>
                 {transaction && (
-                    <CardContent className="flex flex-col items-center gap-6 pt-6">
+                    <CardContent className="flex flex-col items-center gap-6 pt-0">
                         <div className="relative w-48 h-48">
                             <Image src={transaction?.itemImageUrl || `https://picsum.photos/seed/${transactionId}/320/180`} alt={transaction?.itemName || 'Item Image'} layout="fill" objectFit="cover" className="rounded-lg" data-ai-hint="item" />
                         </div>
@@ -373,5 +393,3 @@ export default function TransactionPage() {
         </div>
     );
 }
-
-    
