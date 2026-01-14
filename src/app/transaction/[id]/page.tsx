@@ -62,7 +62,7 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
             toast({ title: "Code Generated", description: "Share this code with the borrower." });
         } catch (error) {
             console.error("generateHandoverCode error:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not generate code." });
+            toast({ variant: 'destructive', title: "Error", description: "Could not generate code. Check permissions." });
         }
         setIsProcessing(false);
     };
@@ -87,7 +87,7 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
                 toast({ title: "Success!", description: "Return verified. Transaction completed." });
             } catch (error) {
                 console.error("Verification error:", error);
-                toast({ variant: 'destructive', title: "Error", description: "Could not complete transaction." });
+                toast({ variant: 'destructive', title: "Error", description: "Could not complete transaction. Check permissions." });
             }
         } else {
             toast({ variant: 'destructive', title: "Invalid Code", description: "The code does not match." });
@@ -101,7 +101,7 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
             return (
                 <CardContent className="flex flex-col items-center gap-4">
                     <Info className="h-8 w-8 text-blue-500" />
-                    <p className="text-muted-foreground text-center">Press the button below to generate a handover code for the borrower.</p>
+                    <p className="text-muted-foreground text-center">You have accepted this request. Press the button below to generate a 4-digit handover code for the borrower.</p>
                     <Button onClick={generateHandoverCode} className="w-full" disabled={isProcessing}>
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Generate Handover Code
@@ -130,10 +130,11 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
         case 'RETURN_PENDING':
              return (
                 <CardContent className="w-full space-y-4">
-                    <p className="text-muted-foreground text-center">The borrower wants to return the item. Enter the 4-digit code they provide.</p>
+                    <p className="text-muted-foreground text-center">The borrower wants to return the item. Enter the 4-digit code they provide to complete the transaction.</p>
                     <Input
                         type="text"
-                        placeholder="Enter return code"
+                        inputMode="numeric"
+                        placeholder="••••"
                         value={returnCodeInput}
                         onChange={(e) => setReturnCodeInput(e.target.value.replace(/\D/g, ''))}
                         maxLength={4}
@@ -142,7 +143,7 @@ function LenderView({ transaction, transactionDocRef }: { transaction: Transacti
                     />
                     <Button onClick={verifyReturnCode} className="w-full" disabled={isProcessing || returnCodeInput.length !== 4}>
                         {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Verify Return
+                        Verify Return & Complete
                     </Button>
                 </CardContent>
             );
@@ -190,7 +191,7 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
                 toast({ title: "Success!", description: "Handover complete. The item is yours (for now!)." });
             } catch (error) {
                 console.error("Verification error:", error);
-                toast({ variant: 'destructive', title: "Error", description: "Could not complete handover." });
+                toast({ variant: 'destructive', title: "Error", description: "Could not complete handover. Check permissions." });
             }
         } else {
             toast({ variant: 'destructive', title: "Invalid Code", description: "The handover code does not match." });
@@ -215,7 +216,7 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
             toast({ title: "Return Initiated", description: "Share the new code with the lender." });
         } catch (error) {
             console.error("generateReturnCode error:", error);
-            toast({ variant: 'destructive', title: "Error", description: "Could not initiate return." });
+            toast({ variant: 'destructive', title: "Error", description: "Could not initiate return. Check permissions." });
         }
         setIsProcessing(false);
     };
@@ -256,7 +257,7 @@ function BorrowerView({ transaction, transactionDocRef, firestore }: { transacti
             return (
                 <CardContent className="flex flex-col items-center gap-4">
                     <Info className="h-8 w-8 text-blue-500" />
-                    <p className="text-muted-foreground text-center">Item is in your possession. Click below to initiate the return process.</p>
+                    <p className="text-muted-foreground text-center">Item is in your possession. Click below to generate a 4-digit return code to give back to the lender.</p>
                     <Button onClick={generateReturnCode} className="w-full" disabled={isProcessing}>
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                         Initiate Return
@@ -301,10 +302,14 @@ export default function TransactionPage() {
         [firestore, transactionId, isUserLoading, user]
     );
 
-    const { data: transaction, isLoading } = useDoc<Transaction>(transactionDocRef);
+    const { data: transaction, isLoading, error } = useDoc<Transaction>(transactionDocRef);
 
     const handleCancelTransaction = async () => {
         if (!transactionDocRef) return;
+        if (transaction && (transaction.status !== 'CREATED' && transaction.status !== 'HANDOVER_PENDING')) {
+            toast({ variant: 'destructive', title: 'Invalid Action', description: 'Cannot cancel a transaction that is already in progress.' });
+            return;
+        }
         try {
             await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
             toast({ title: 'Transaction Cancelled' });
@@ -317,6 +322,18 @@ export default function TransactionPage() {
     const renderContent = () => {
         if (isLoading || isUserLoading) {
             return <div className="flex min-h-[200px] items-center justify-center"><Loader2 className="h-16 w-16 animate-spin" /></div>;
+        }
+        
+        if (error) {
+             return (
+                <CardContent className="text-center p-6">
+                    <Alert variant="destructive">
+                        <ShieldX className="h-4 w-4" />
+                        <AlertTitle>Permission Denied</AlertTitle>
+                        <AlertDescription>You do not have permission to view this transaction. This may be because it belongs to other users.</AlertDescription>
+                    </Alert>
+                </CardContent>
+            );
         }
 
         if (!transaction || transaction.status === 'CANCELLED') {
@@ -339,7 +356,7 @@ export default function TransactionPage() {
              return <BorrowerView transaction={transaction} transactionDocRef={transactionDocRef} firestore={firestore} />;
         }
         
-        // User is not part of this transaction
+        // This case should ideally be prevented by the security rules and the subsequent error state.
         return (
             <CardContent className="text-center p-6">
                 <Alert variant="destructive">
@@ -382,7 +399,7 @@ export default function TransactionPage() {
                     {transaction?.status === 'COMPLETED' && (
                         <Button asChild variant="outline" className="w-full"><Link href="/history">View in History</Link></Button>
                     )}
-                    {transaction && transaction.status !== 'COMPLETED' && transaction.status !== 'CANCELLED' && (
+                    {transaction && (transaction.status === 'CREATED' || transaction.status === 'HANDOVER_PENDING') && (
                         <Button variant="destructive" className="w-full" onClick={handleCancelTransaction}>
                             <ShieldX className="mr-2 h-4 w-4" />
                             Cancel Transaction
