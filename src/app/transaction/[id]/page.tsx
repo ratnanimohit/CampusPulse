@@ -56,7 +56,9 @@ export default function TransactionPage() {
 
   const { data: transaction, isLoading, error } = useDoc<Transaction>(transactionDocRef);
 
-  if (isLoading || isUserLoading) {
+  const isPageLoading = isLoading || isUserLoading;
+
+  if (isPageLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-16 w-16 animate-spin" />
@@ -78,7 +80,8 @@ export default function TransactionPage() {
     );
   }
 
-  if (!transaction) {
+  // Only show "Not Found" after loading is complete and if there's no data
+  if (!isPageLoading && !transaction) {
     return (
       <Card>
         <CardHeader>
@@ -89,6 +92,10 @@ export default function TransactionPage() {
         </CardContent>
       </Card>
     );
+  }
+  
+  if (!transaction) {
+    return null; // Should be covered by the loading state above, but as a fallback.
   }
 
   const isFulfiller = user?.uid === transaction.fulfillerId;
@@ -121,7 +128,9 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [returnCodeInput, setReturnCodeInput] = useState('');
   const { toast } = useToast();
-  const transactionDocRef = doc(useFirestore(), 'transactions', transaction.id);
+  const firestore = useFirestore();
+  if (!firestore) return null;
+  const transactionDocRef = doc(firestore, 'transactions', transaction.id);
 
   const generateHandoverCode = async () => {
     if (transaction.status !== 'CREATED') {
@@ -193,6 +202,9 @@ function LenderView({ transaction }: { transaction: Transaction }) {
           </Button>
         );
       case 'HANDOVER_PENDING':
+        // This state assumes the lender has just generated the code.
+        // If they refresh, the `generatedCode` state is lost, but the hash is in Firestore.
+        // We could show the code again if we stored it, but for now, we just wait.
         return (
           <div className="text-center p-4 border-dashed border-2 rounded-lg">
             <p className="text-muted-foreground">Your handover code is:</p>
@@ -269,7 +281,9 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
   const [handoverCodeInput, setHandoverCodeInput] = useState('');
   const [generatedReturnCode, setGeneratedReturnCode] = useState<string | null>(null);
   const { toast } = useToast();
-  const transactionDocRef = doc(useFirestore(), 'transactions', transaction.id);
+  const firestore = useFirestore();
+  if (!firestore) return null;
+  const transactionDocRef = doc(firestore, 'transactions', transaction.id);
 
   const verifyHandoverCode = async () => {
     if (transaction.status !== 'HANDOVER_PENDING' || !transaction.handoverCodeHash) {
@@ -286,7 +300,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         });
         // Non-blocking delete of the original item request
         if (transaction.itemId) {
-            deleteDoc(doc(useFirestore(), 'itemRequests', transaction.itemId)).catch(console.error);
+            deleteDoc(doc(firestore, 'itemRequests', transaction.itemId)).catch(console.error);
         }
         toast({ title: 'Success!', description: 'Handover complete. You now have the item.' });
       } catch (error: any) {
@@ -403,3 +417,5 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
 
   return <>{renderContent()}</>;
 }
+
+    

@@ -31,7 +31,6 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 type ItemRequest = {
   id: string;
@@ -85,8 +84,7 @@ export default function Dashboard() {
     setIsFulfilling(request.id);
 
     try {
-      const transactionsCol = collection(firestore, 'transactions');
-      const transactionDocRef = doc(transactionsCol);
+      const transactionDocRef = doc(collection(firestore, 'transactions'));
 
       const transactionData = {
         id: transactionDocRef.id,
@@ -105,13 +103,18 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       };
       
-      // Use addDocumentNonBlocking to avoid awaiting and potential UI block
-      addDocumentNonBlocking(transactionsCol, transactionData);
+      // Await the document creation to prevent race condition
+      await setDoc(transactionDocRef, transactionData);
   
+      console.log("Transaction created with ID:", transactionDocRef.id);
+
       toast({
         title: 'Request Accepted!',
         description: `Redirecting to complete the handover.`,
       });
+      
+      // Add a small delay to ensure Firestore document is available on the next page
+      await new Promise(resolve => setTimeout(resolve, 300));
   
       router.push(`/transaction/${transactionDocRef.id}`);
   
@@ -325,7 +328,9 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             {isLoadingRequests ? (
-              <p>Loading requests...</p>
+              <div className="flex items-center justify-center p-10">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
             ) : communityRequests && communityRequests.length > 0 ? (
               <Table>
                 <TableHeader>
@@ -384,3 +389,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+    
