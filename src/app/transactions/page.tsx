@@ -4,8 +4,9 @@ import { useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, or, and } from 'firebase/firestore';
 import { TransactionCard, type Transaction } from '@/components/transaction-card';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileX, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export default function TransactionsPage() {
   const { user, isUserLoading } = useUser();
@@ -14,8 +15,6 @@ export default function TransactionsPage() {
   const transactionsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     
-    // This query fetches transactions where the user is either the fulfiller or the requester,
-    // and the status is not 'COMPLETED' or 'CANCELLED'.
     return query(
       collection(firestore, 'transactions'),
       and(
@@ -48,7 +47,9 @@ export default function TransactionsPage() {
       ) : transactions && transactions.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {transactions.map(tx => (
-            <TransactionCard key={tx.id} transaction={tx} />
+            <Link href={`/transaction/${tx.id}`} key={tx.id}>
+              <TransactionCard transaction={tx} />
+            </Link>
           ))}
         </div>
       ) : (

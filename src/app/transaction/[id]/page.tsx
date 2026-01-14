@@ -160,6 +160,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
       case 'RETURN_PENDING':
         return (
           <CardContent className="space-y-2 p-6">
+            <p className="text-sm text-center text-muted-foreground">Requester has initiated a return. Enter their code to complete.</p>
             <Input
               type="text"
               placeholder="Enter 4-digit return code"
@@ -220,7 +221,6 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         updatedAt: serverTimestamp(),
       });
       if (transaction.itemId) {
-        // This is a fire-and-forget delete.
         deleteDoc(doc(firestore, 'itemRequests', transaction.itemId)).catch(console.error);
       }
       toast({ title: 'Handover Complete!', description: 'You now have the item.' });
@@ -262,17 +262,16 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
   const renderContent = () => {
     switch (transaction.status) {
       case 'CREATED':
-      case 'HANDOVER_PENDING':
-        if (!transaction.handoverCodeHash) {
-          return (
+        return (
             <CardContent className="text-center text-muted-foreground p-6">
               <Loader2 className="mx-auto h-6 w-6 animate-spin" />
               <p className="mt-2">Waiting for lender to generate handover code...</p>
             </CardContent>
           );
-        }
+      case 'HANDOVER_PENDING':
         return (
           <CardContent className="space-y-2 p-6">
+             <p className="text-sm text-center text-muted-foreground">Lender has generated a code. Enter it below to confirm handover.</p>
             <Input
               type="text"
               placeholder="Enter 4-digit handover code"
@@ -292,7 +291,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           </CardContent>
         );
       case 'ACTIVE':
-         if(generatedCode){
+        if(generatedCode){
              return <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
                 <p className="text-muted-foreground">Your return code is:</p>
                 <p className="text-4xl font-bold tracking-widest my-2">{generatedCode}</p>
