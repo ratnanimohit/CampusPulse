@@ -17,7 +17,7 @@ import { ArrowLeft, Loader2, CheckCircle, Info, ShieldX, KeyRound, Send } from '
 import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type Transaction = {

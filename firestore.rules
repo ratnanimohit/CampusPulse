@@ -2,9 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /transactions/{docId} {
-      allow list, get: if request.auth != null;
-      allow create, update, delete: if request.auth != null;
+    match /transactions/{id} {
+        allow read: if request.auth != null && (request.auth.uid == resource.data.requesterId || request.auth.uid == resource.data.fulfillerId);
+        
+        allow create: if request.auth != null;
+
+        allow update: if request.auth != null && (
+            // Fulfiller generates the code
+            (request.auth.uid == resource.data.fulfillerId && request.resource.data.verificationCode is string && resource.data.verificationCode == null)
+            ||
+            // Requester verifies the code to complete the transaction
+            (request.auth.uid == resource.data.requesterId && request.resource.data.status == "completed" && resource.data.status == "awaiting_verification")
+            ||
+            // Any participant can cancel
+            ( (request.auth.uid == resource.data.requesterId || request.auth.uid == resource.data.fulfillerId) && request.resource.data.status == "cancelled")
+        );
+        allow list: if request.auth != null;
     }
 
     match /itemRequests/{docId} {
