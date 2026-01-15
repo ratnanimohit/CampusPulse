@@ -5,7 +5,7 @@ import { AppContent } from '@/components/AppContent';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Campus Pulse',
+  title: 'CampusPulse',
   description: 'A resource-sharing community for college students.',
 };
 
@@ -31,5 +31,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-    

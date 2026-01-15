@@ -150,7 +150,7 @@ export default function LoginPage() {
         await signInWithEmailAndPassword(auth, data.email, data.password);
         toast({
           title: 'Login Successful!',
-          description: "Welcome back to Campus Pulse!",
+          description: "Welcome back to CampusPulse!",
         });
         router.push('/dashboard');
       } else {
@@ -175,7 +175,7 @@ export default function LoginPage() {
 
         toast({
           title: 'Account Created!',
-          description: 'Welcome to Campus Pulse! You can now log in.',
+          description: 'Welcome to CampusPulse! You can now log in.',
         });
         setFormType('login'); // Switch to login view after successful signup
         form.reset();
@@ -200,7 +200,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">
-            Welcome to Campus Pulse
+            Welcome to CampusPulse
           </CardTitle>
           <CardDescription>
             {formType === 'login'
@@ -339,5 +339,3 @@ export default function LoginPage() {
     </div>
   );
 }
-
-    

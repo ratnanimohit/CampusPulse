@@ -20,7 +20,7 @@ export function Header() {
           className="flex items-center gap-2 text-lg font-semibold md:text-base font-headline"
         >
           <Package2 className="h-6 w-6 text-primary" />
-          <span className="sr-only">Campus Pulse</span>
+          <span className="sr-only">CampusPulse</span>
         </Link>
       </nav>
       <Sheet>
@@ -38,7 +38,7 @@ export function Header() {
                 className="flex items-center gap-2 font-semibold font-headline"
               >
                 <Package2 className="h-6 w-6 text-primary" />
-                <span>Campus Pulse</span>
+                <span>CampusPulse</span>
               </Link>
             </SheetTitle>
           </SheetHeader>
@@ -51,5 +51,3 @@ export function Header() {
     </header>
   );
 }
-
-    
