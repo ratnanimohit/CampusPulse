@@ -62,18 +62,16 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     <div className={cn("flex h-full flex-col", isMobile ? "" : "max-h-screen")}>
       <nav
         className={cn(
-          'grid items-start gap-1 p-2 text-sm font-medium lg:px-4',
+          'grid items-start gap-1 p-2 text-sm font-medium lg:px-4 flex-grow',
           isMobile && 'grid-rows-auto grid-flow-row gap-4 pt-4',
           className
         )}
         {...props}
       >
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
-      </nav>
-      <div className={cn('mt-auto p-2 lg:px-4 space-y-1')}>
-        <Link
+         <Link
             href="/settings"
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", {
+            className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-auto", {
                 "text-primary bg-accent": isActive("/settings"),
             })}
             >
@@ -87,7 +85,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
             <LogOut className="h-4 w-4" />
             Sign Out
         </button>
-       </div>
+      </nav>
     </div>
   );
 }
