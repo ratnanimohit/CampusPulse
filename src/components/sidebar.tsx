@@ -8,10 +8,12 @@ export function Sidebar() {
       <div className="flex h-16 items-center border-b px-4 lg:px-6 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold font-headline">
           <Package2 className="h-6 w-6 text-primary" />
-          <span className="">Campus Collab</span>
+          <span className="">Campus Pulse</span>
         </Link>
       </div>
       <SidebarNav className="overflow-y-auto" />
     </div>
   );
 }
+
+    
