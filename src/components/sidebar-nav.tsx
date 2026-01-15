@@ -72,7 +72,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
         <button
           onClick={() => auth.signOut()}
-          className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-auto")}
+          className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary")}
           >
           <LogOut className="h-4 w-4" />
           Sign Out
