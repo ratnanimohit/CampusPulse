@@ -29,7 +29,7 @@ import {
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 
 const glaEmailValidator = (email: string) => email.endsWith('@gla.ac.in');
@@ -54,6 +54,7 @@ export default function LoginPage() {
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formType, setFormType] = useState<'login' | 'signup'>('login');
+  const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -201,14 +202,25 @@ export default function LoginPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="••••••••"
-                        {...field}
+                    <div className="relative">
+                      <FormControl>
+                        <Input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="••••••••"
+                          {...field}
+                          disabled={isSubmitting}
+                          className="pr-10"
+                        />
+                      </FormControl>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
                         disabled={isSubmitting}
-                      />
-                    </FormControl>
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
