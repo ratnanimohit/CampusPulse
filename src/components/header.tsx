@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Menu, Package2 } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/sheet';
 import { UserNav } from '@/components/user-nav';
 import { SidebarNav } from '@/components/sidebar-nav';
+import { Logo } from '@/components/Logo';
 
 export function Header() {
   return (
@@ -19,7 +20,7 @@ export function Header() {
           href="/dashboard"
           className="flex items-center gap-2 text-lg font-semibold md:text-base font-headline"
         >
-          <Package2 className="h-6 w-6 text-primary" />
+          <Logo className="h-6 w-6 text-primary" />
           <span className="sr-only">CampusPulse</span>
         </Link>
       </nav>
@@ -37,7 +38,7 @@ export function Header() {
                 href="/dashboard"
                 className="flex items-center gap-2 font-semibold font-headline"
               >
-                <Package2 className="h-6 w-6 text-primary" />
+                <Logo className="h-6 w-6 text-primary" />
                 <span>CampusPulse</span>
               </Link>
             </SheetTitle>
