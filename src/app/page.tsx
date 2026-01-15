@@ -44,7 +44,26 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
-type LoginFormValues = z.infer<typeof loginSchema>;
+const signupSchema = z.object({
+    firstName: z.string().min(1, 'First name is required.'),
+    lastName: z.string().min(1, 'Last name is required.'),
+    email: z
+        .string()
+        .email('Invalid email address.')
+        .refine(glaEmailValidator, {
+        message: "Email must be a '@gla.ac.in' address.",
+        }),
+    password: z.string().min(6, 'Password must be at least 6 characters long.'),
+});
+
+// Use a discriminated union to handle both forms
+const formSchema = z.discriminatedUnion("formType", [
+  loginSchema.extend({ formType: z.literal("login") }),
+  signupSchema.extend({ formType: z.literal("signup") }),
+]);
+
+type FormValues = z.infer<typeof formSchema>;
+
 
 export default function LoginPage() {
   const { toast } = useToast();
@@ -56,13 +75,25 @@ export default function LoginPage() {
   const [formType, setFormType] = useState<'login' | 'signup'>('login');
   const [showPassword, setShowPassword] = useState(false);
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formType === 'login' ? loginSchema : signupSchema),
     defaultValues: {
       email: '',
       password: '',
+      ...(formType === 'signup' && { firstName: '', lastName: '' }),
     },
   });
+
+  // Re-initialize form when formType changes
+  useEffect(() => {
+    form.reset({
+      email: '',
+      password: '',
+      ...(formType === 'signup' && { firstName: '', lastName: '' }),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formType]);
+
 
   useEffect(() => {
     if (user) {
@@ -112,7 +143,7 @@ export default function LoginPage() {
       });
   };
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
       if (formType === 'login') {
@@ -123,20 +154,21 @@ export default function LoginPage() {
         });
         router.push('/dashboard');
       } else {
+        // We can be sure it's signup data because of the check
+        const signupData = data as z.infer<typeof signupSchema>;
         const userCredential = await createUserWithEmailAndPassword(
           auth,
-          data.email,
-          data.password
+          signupData.email,
+          signupData.password
         );
         const newUser = userCredential.user;
-        const [firstName, lastName] = newUser.email?.split('@')[0].split('.') || ['New', 'User'];
-
+        
         // Create user profile in Firestore
         await setDoc(doc(firestore, 'userProfiles', newUser.uid), {
           id: newUser.uid,
           email: newUser.email,
-          firstName: firstName.charAt(0).toUpperCase() + firstName.slice(1),
-          lastName: lastName ? lastName.charAt(0).toUpperCase() + lastName.slice(1) : '',
+          firstName: signupData.firstName,
+          lastName: signupData.lastName,
           karmaPoints: 0,
           transactionCount: 0,
         });
@@ -179,6 +211,46 @@ export default function LoginPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+               {formType === 'signup' && (
+                <>
+                  <div className="flex gap-4">
+                    <FormField
+                      control={form.control}
+                      name="firstName"
+                      render={({ field }) => (
+                        <FormItem className="w-1/2">
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="First Name"
+                              {...field}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="lastName"
+                      render={({ field }) => (
+                        <FormItem className="w-1/2">
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Last Name"
+                              {...field}
+                              disabled={isSubmitting}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </>
+              )}
               <FormField
                 control={form.control}
                 name="email"
@@ -242,7 +314,6 @@ export default function LoginPage() {
                   className="p-0"
                   onClick={() => {
                     setFormType('signup');
-                    form.reset();
                   }}
                 >
                   Sign Up
@@ -256,7 +327,6 @@ export default function LoginPage() {
                   className="p-0"
                   onClick={() => {
                     setFormType('login');
-                    form.reset();
                   }}
                 >
                   Sign In
