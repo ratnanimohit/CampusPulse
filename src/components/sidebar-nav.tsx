@@ -34,13 +34,14 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/transactions', icon: Repeat, label: 'Active Transactions' },
     { href: '/history', icon: History, label: 'History' },
     { href: '/profile', icon: Users, label: 'Profile' },
+    { href: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   const isActive = (href: string) => {
     return pathname.startsWith(href);
   }
 
-  const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: () => void }) => (
+  const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void }) => (
     <Link
       href={href}
       onClick={onClick}
@@ -69,21 +70,12 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
         {...props}
       >
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
-         <Link
-            href="/settings"
-            className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-auto", {
-                "text-primary bg-accent": isActive("/settings"),
-            })}
-            >
-            <Settings className="h-4 w-4" />
-            Settings
-        </Link>
         <button
-            onClick={() => auth.signOut()}
-            className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary")}
-            >
-            <LogOut className="h-4 w-4" />
-            Sign Out
+          onClick={() => auth.signOut()}
+          className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary mt-auto")}
+          >
+          <LogOut className="h-4 w-4" />
+          Sign Out
         </button>
       </nav>
     </div>
