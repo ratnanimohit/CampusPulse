@@ -28,6 +28,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
+import { MapLoadError } from '@/components/map-load-error';
 
 export type Transaction = {
   id: string;
@@ -486,9 +487,7 @@ export default function TransactionPage() {
             </h3>
             <div className="h-56 w-full rounded-lg overflow-hidden border">
                 {loadError ? (
-                    <div className="h-full flex items-center justify-center bg-destructive/10 text-destructive-foreground p-4 text-center">
-                        Could not load map. Please check the API key configuration.
-                    </div>
+                    <MapLoadError loadError={loadError} />
                 ) : !isLoaded ? (
                     <div className="h-full flex items-center justify-center bg-muted">
                         <Loader2 className="h-8 w-8 animate-spin" />

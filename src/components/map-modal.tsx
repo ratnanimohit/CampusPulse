@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import { MapLoadError } from './map-load-error';
 
 type ItemRequest = {
   id: string;
@@ -31,7 +32,7 @@ interface MapModalProps {
 
 const containerStyle = {
   width: '100%',
-  height: '400px',
+  height: '100%',
 };
 
 const libraries: ('places')[] = ['places'];
@@ -50,6 +51,40 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
     }
   };
 
+  const renderMapContent = () => {
+    if (loadError) {
+      return <MapLoadError loadError={loadError} />;
+    }
+    if (!hasLocation) {
+        return (
+            <div className="h-full flex items-center justify-center bg-muted text-muted-foreground">
+                Location data is not available for this request.
+            </div>
+        );
+    }
+    if (!isLoaded) {
+        return (
+            <div className="h-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+    return (
+        <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={request.location}
+            zoom={12}
+            options={{
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+            }}
+        >
+            <Marker position={request.location!} />
+        </GoogleMap>
+    );
+  }
+
   return (
     <Dialog open={!!request} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -60,38 +95,15 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg overflow-hidden border">
-          {hasLocation && isLoaded && (
-            <GoogleMap
-              mapContainerStyle={containerStyle}
-              center={request.location}
-              zoom={12}
-            >
-              <Marker position={request.location!} />
-            </GoogleMap>
-          )}
-          {!hasLocation && (
-            <div className="h-96 flex items-center justify-center bg-muted text-muted-foreground">
-              Location data is not available for this request.
-            </div>
-          )}
-          {loadError && (
-             <div className="h-96 flex items-center justify-center bg-destructive/10 text-destructive">
-              Error loading map.
-            </div>
-          )}
-          {!isLoaded && hasLocation && (
-              <div className="h-96 flex items-center justify-center bg-muted">
-                <Loader2 className="h-8 w-8 animate-spin" />
-              </div>
-          )}
+        <div className="h-[400px] rounded-lg overflow-hidden border">
+            {renderMapContent()}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!hasLocation || isFulfilling}>
+          <Button onClick={handleConfirm} disabled={!hasLocation || isFulfilling || !!loadError}>
             {isFulfilling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm & Fulfill
           </Button>
