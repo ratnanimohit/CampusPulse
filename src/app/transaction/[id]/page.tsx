@@ -23,10 +23,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, KeyRound } from 'lucide-react';
+import { Loader2, KeyRound, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 
 export type Transaction = {
   id: string;
@@ -47,6 +48,7 @@ export type Transaction = {
   handoverVerified: boolean;
   returnCodeHash: string | null;
   returnVerified: boolean;
+  location?: { lat: number; lng: number };
 };
 
 // --- RENDER COMPONENTS ---
@@ -360,6 +362,11 @@ export default function TransactionPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
+  });
+
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
     [firestore, id]
@@ -439,6 +446,18 @@ export default function TransactionPage() {
       }
   }
 
+  const mapContainerStyle = {
+    width: '100%',
+    height: '100%',
+  };
+
+  const mapOptions = {
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false,
+    zoomControl: false,
+  };
+
 
   return (
     <div className="flex justify-center items-start pt-10">
@@ -459,6 +478,38 @@ export default function TransactionPage() {
             You are the <span className="font-semibold">{userRole}</span>.
           </CardDescription>
         </CardHeader>
+        
+        <CardContent className="pb-4">
+            <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                Meeting Location
+            </h3>
+            <div className="h-56 w-full rounded-lg overflow-hidden border">
+                {loadError ? (
+                    <div className="h-full flex items-center justify-center bg-destructive/10 text-destructive-foreground p-4 text-center">
+                        Could not load map. Please check the API key configuration.
+                    </div>
+                ) : !isLoaded ? (
+                    <div className="h-full flex items-center justify-center bg-muted">
+                        <Loader2 className="h-8 w-8 animate-spin" />
+                    </div>
+                ) : transaction.location ? (
+                    <GoogleMap
+                        mapContainerStyle={mapContainerStyle}
+                        center={transaction.location}
+                        zoom={15}
+                        options={mapOptions}
+                    >
+                        <Marker position={transaction.location} />
+                    </GoogleMap>
+                ) : (
+                    <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
+                        <p className="text-sm text-muted-foreground">Location data not provided for this transaction.</p>
+                    </div>
+                )}
+            </div>
+        </CardContent>
+
         {isFulfiller && <LenderView transaction={transaction} />}
         {isRequester && <BorrowerView transaction={transaction} />}
       </Card>

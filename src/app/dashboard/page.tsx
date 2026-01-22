@@ -175,6 +175,7 @@ export default function Dashboard() {
         returnVerified: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        ...(request.location && { location: request.location }),
       };
       
       await setDoc(transactionDocRef, transactionData);
