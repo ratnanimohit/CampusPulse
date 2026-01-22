@@ -96,7 +96,7 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                              <Avatar className="h-20 w-20 border-2 border-primary">
-                                <AvatarImage src={user.photoURL || ''} alt={displayName} data-ai-hint="person avatar"/>
+                                <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`} alt={displayName} data-ai-hint="person avatar"/>
                                 <AvatarFallback>{getInitials(userProfile?.firstName, userProfile?.lastName)}</AvatarFallback>
                             </Avatar>
                             <div>
