@@ -196,6 +196,18 @@
           "type": "string",
           "description": "The date and time the item is expected to be available.",
           "format": "date-time"
+        },
+        "location": {
+          "type": "object",
+          "description": "The geographical coordinates where the item is requested.",
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lng": {
+              "type": "number"
+            }
+          }
         }
       },
       "required": [

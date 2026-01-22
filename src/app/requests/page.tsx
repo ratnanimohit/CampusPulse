@@ -43,6 +43,26 @@ const requestFormSchema = z.object({
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
 
+const getCurrentLocation = (): Promise<{ lat: number; lng: number } | null> => {
+  return new Promise(resolve => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      position =>
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }),
+      error => {
+        console.warn(`Geolocation error: ${error.message}`);
+        resolve(null); // On error, resolve with null
+      }
+    );
+  });
+};
+
 export default function RequestsPage() {
   const { toast } = useToast();
   const router = useRouter();
@@ -68,22 +88,24 @@ export default function RequestsPage() {
       });
       return;
     }
+    
+    const location = await getCurrentLocation();
 
     const itemRequestsCol = collection(firestore, 'itemRequests');
-    // Create a new document reference with a unique ID
     const newRequestRef = doc(itemRequestsCol);
+    
+    const requestData = {
+        ...data,
+        id: newRequestRef.id,
+        requesterId: user.uid,
+        ...(location && { location })
+    };
 
-    // Use setDoc to create the document with the specific ID
-    await setDoc(newRequestRef, {
-      ...data,
-      id: newRequestRef.id, // Add the generated ID to the document data
-      requesterId: user.uid,
-    });
-
+    await setDoc(newRequestRef, requestData);
 
     toast({
       title: 'Request Submitted!',
-      description: 'Your request has been successfully submitted to the community.',
+      description: location ? 'Your request has been successfully submitted to the community.' : 'Your request was submitted without location data.',
     });
     form.reset();
     router.push('/my-requests');
@@ -98,7 +120,7 @@ export default function RequestsPage() {
               Create a New Request
             </CardTitle>
             <CardDescription>
-              Let the community know what item you need.
+              Let the community know what item you need. We'll ask for your location to help lenders find you.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

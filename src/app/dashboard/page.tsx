@@ -32,12 +32,17 @@ import {
   or,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { MapModal } from '@/components/map-modal';
 
 type ItemRequest = {
   id: string;
   itemName: string;
   urgency: 'emergency' | 'medium' | 'normal';
   requesterId: string;
+  location?: {
+    lat: number;
+    lng: number;
+  };
 };
 
 type UserProfile = {
@@ -66,7 +71,8 @@ export default function Dashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [userName, setUserName] = useState('');
-  const [isFulfilling, setIsFulfilling] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -149,7 +155,7 @@ export default function Dashboard() {
 
   const fulfillRequest = async (request: ItemRequest) => {
     if (!firestore || !user) return;
-    setIsFulfilling(request.id);
+    setIsProcessing(true);
 
     try {
       const transactionDocRef = doc(collection(firestore, 'transactions'));
@@ -190,8 +196,10 @@ export default function Dashboard() {
         title: 'Fulfillment Failed',
         description: 'Could not start the transaction process.',
       });
-       setIsFulfilling(null);
-    } 
+    } finally {
+        setIsProcessing(false);
+        setSelectedRequest(null);
+    }
   };
 
   if (!isClient) {
@@ -199,6 +207,13 @@ export default function Dashboard() {
   }
 
   return (
+    <>
+    <MapModal 
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+        onConfirm={fulfillRequest}
+        isFulfilling={isProcessing}
+    />
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between">
         <div>
@@ -427,10 +442,9 @@ export default function Dashboard() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => fulfillRequest(req)}
-                          disabled={user?.uid === req.requesterId || isFulfilling !== null}
+                          onClick={() => setSelectedRequest(req)}
+                          disabled={user?.uid === req.requesterId}
                         >
-                           {isFulfilling === req.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Fulfill
                         </Button>
                       </TableCell>
@@ -450,5 +464,6 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+    </>
   );
 }
