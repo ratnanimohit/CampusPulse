@@ -33,6 +33,7 @@ import {
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 type ItemRequest = {
   id: string;
@@ -65,6 +66,15 @@ type Transaction = {
 
 // A simple delay function
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
+const findImageUrl = (itemName: string): string => {
+  const lowerItemName = itemName.toLowerCase();
+  const foundImage = PlaceHolderImages.find(img => lowerItemName.includes(img.id));
+  if (foundImage) {
+    return foundImage.imageUrl;
+  }
+  return `https://picsum.photos/seed/${itemName.replace(/\s/g, '')}/320/180`;
+};
 
 
 export default function Dashboard() {
@@ -166,7 +176,7 @@ export default function Dashboard() {
         requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
-        itemImageUrl: `https://picsum.photos/seed/${request.itemName.replace(/\s/g, '')}/320/180`,
+        itemImageUrl: findImageUrl(request.itemName),
         karma: 10, // Example karma
         status: 'CREATED',
         handoverCodeHash: null,

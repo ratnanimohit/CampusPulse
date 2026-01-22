@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "calculator",
+      "description": "A graphic calculator for engineering students.",
+      "imageUrl": "https://images.unsplash.com/photo-1648201637025-1c77b9be3013?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYWxjdWxhdG9yfGVufDB8fHx8MTc2OTA5Mjc5M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "calculator"
+    },
+    {
+      "id": "iron",
+      "description": "An electric iron for clothes.",
+      "imageUrl": "https://images.unsplash.com/photo-1663312148200-54217ee86b8b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxlbGVjdHJpYyUyMGlyb258ZW58MHx8fHwxNzY5MDkyNzkzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "electric iron"
+    },
+    {
+      "id": "charger",
+      "description": "A generic USB-C charger.",
+      "imageUrl": "https://images.unsplash.com/photo-1562232723-6949c130734d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxwaG9uZSUyMGNoYXJnZXJ8ZW58MHx8fHwxNzY5MDkyNzkzfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "phone charger"
+    },
+    {
+      "id": "textbook",
+      "description": "A generic textbook.",
+      "imageUrl": "https://images.unsplash.com/photo-1543002588-bfa74002ed7e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxib29rfGVufDB8fHx8MTc2ODk5NzUzMHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "book"
+    },
+    {
+      "id": "notebook",
+      "description": "A spiral notebook.",
+      "imageUrl": "https://images.unsplash.com/photo-1581431886211-6b932f8367f2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxub3RlYm9va3xlbnwwfHx8fDE3NjkwOTI3OTN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "notebook"
+    },
+    {
+      "id": "drafter",
+      "description": "A drafter for engineering drawing.",
+      "imageUrl": "https://images.unsplash.com/photo-1685282548172-c65924a11745?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxkcmFmdGVyfGVufDB8fHx8MTc2OTA5Mjc5M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "drafter"
+    },
+    {
+      "id": "lab coat",
+      "description": "A lab coat for science experiments.",
+      "imageUrl": "https://images.unsplash.com/photo-1618053448492-2b629c2c912c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxsYWIlMjBjb2F0fGVufDB8fHx8MTc2OTA5Mjc5M3ww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "lab coat"
+    }
+  ]
 }
