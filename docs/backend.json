@@ -30,6 +30,14 @@
         "transactionCount": {
           "type": "number",
           "description": "Number of transactions the user has made today."
+        },
+        "averageRating": {
+          "type": "number",
+          "description": "The user's average feedback rating from 1 to 5."
+        },
+        "ratingsCount": {
+          "type": "number",
+          "description": "The total number of ratings the user has received."
         }
       },
       "required": [
@@ -38,7 +46,9 @@
         "firstName",
         "lastName",
         "karmaPoints",
-        "transactionCount"
+        "transactionCount",
+        "averageRating",
+        "ratingsCount"
       ]
     },
     "ItemListing": {
@@ -218,6 +228,51 @@
         "urgency",
         "requiredBy"
       ]
+    },
+    "Feedback": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents feedback given by one user to another after a transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the feedback."
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "The ID of the completed transaction."
+        },
+        "raterId": {
+          "type": "string",
+          "description": "The UID of the user giving the feedback."
+        },
+        "ratedUserId": {
+          "type": "string",
+          "description": "The UID of the user being rated."
+        },
+        "rating": {
+          "type": "number",
+          "description": "The rating given, from 1 to 5."
+        },
+        "comment": {
+          "type": "string",
+          "description": "An optional comment."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the feedback was created."
+        }
+      },
+      "required": [
+        "id",
+        "transactionId",
+        "raterId",
+        "ratedUserId",
+        "rating",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -275,6 +330,22 @@
           },
           "description": "Stores item requests.",
           "params": []
+        }
+      },
+       {
+        "path": "/feedback/{feedbackId}",
+        "definition": {
+          "entityName": "Feedback",
+          "schema": {
+            "$ref": "#/backend/entities/Feedback"
+          },
+          "description": "Stores feedback for completed transactions.",
+          "params": [
+            {
+              "name": "feedbackId",
+              "description": "The unique identifier for the feedback."
+            }
+          ]
         }
       }
     ],

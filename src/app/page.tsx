@@ -171,6 +171,8 @@ export default function LoginPage() {
           lastName: signupData.lastName,
           karmaPoints: 0,
           transactionCount: 0,
+          averageRating: 0,
+          ratingsCount: 0,
         });
 
         toast({

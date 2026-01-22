@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import {
   doc,
   updateDoc,
@@ -10,6 +10,9 @@ import {
   deleteDoc,
   writeBatch,
   increment,
+  collection,
+  query,
+  where
 } from 'firebase/firestore';
 import { simpleHash } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 import { MapLoadError } from '@/components/map-load-error';
+import { FeedbackForm } from '@/components/feedback-form';
 
 export type Transaction = {
   id: string;
@@ -379,7 +383,18 @@ export default function TransactionPage() {
     error,
   } = useDoc<Transaction>(transactionDocRef);
 
-  const isLoading = isUserLoading || isTransactionLoading;
+  const feedbackQuery = useMemoFirebase(
+    () => (firestore && id && user) ? query(
+      collection(firestore, 'feedback'),
+      where('transactionId', '==', id),
+      where('raterId', '==', user.uid)
+    ) : null,
+    [firestore, id, user]
+  );
+  const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
+
+
+  const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback;
 
   if (isLoading) {
     return (
@@ -407,15 +422,37 @@ export default function TransactionPage() {
     );
   }
 
+  const isFulfiller = user?.uid === transaction.fulfillerId;
+  const isRequester = user?.uid === transaction.requesterId;
+  const userRole = isFulfiller ? 'Lender' : isRequester ? 'Borrower' : 'Observer';
+
   if (transaction.status === 'COMPLETED' || transaction.status === 'CANCELLED') {
+      const hasGivenFeedback = userFeedback && userFeedback.length > 0;
+      const ratedUserId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
+
       return (
-         <div className="flex flex-col items-center justify-center h-full gap-4">
+         <div className="flex flex-col items-center justify-center pt-10">
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="font-headline text-center">{transaction.status === 'COMPLETED' ? 'Transaction Complete' : 'Transaction Cancelled'}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-center">
-                    <p>This transaction is now closed.</p>
+                <CardContent>
+                    {transaction.status === 'COMPLETED' && user && (
+                       hasGivenFeedback ? (
+                           <div className="text-center">
+                               <p className="text-muted-foreground">Thank you for your feedback!</p>
+                           </div>
+                       ) : (
+                           <FeedbackForm 
+                                transactionId={transaction.id}
+                                ratedUserId={ratedUserId}
+                                raterId={user.uid}
+                           />
+                       )
+                    )}
+                     {transaction.status === 'CANCELLED' && (
+                        <p className="text-center text-muted-foreground">This transaction was cancelled.</p>
+                     )}
                 </CardContent>
                 <CardFooter>
                     <Button className="w-full" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
@@ -424,10 +461,6 @@ export default function TransactionPage() {
         </div>
       )
   }
-
-  const isFulfiller = user?.uid === transaction.fulfillerId;
-  const isRequester = user?.uid === transaction.requesterId;
-  const userRole = isFulfiller ? 'Lender' : isRequester ? 'Borrower' : 'Observer';
 
   if (!isFulfiller && !isRequester) {
     return (
