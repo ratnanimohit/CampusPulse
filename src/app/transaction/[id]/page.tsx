@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Loader2, KeyRound, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -245,23 +246,30 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         );
       case 'RETURN_PENDING':
         return (
-          <CardContent className="space-y-2 p-6">
-            <p className="text-sm text-center text-muted-foreground">Requester has initiated a return. Enter their code to complete.</p>
-            <Input
-              type="text"
-              placeholder="Enter 4-digit return code"
-              value={verificationCode}
-              onChange={e => setVerificationCode(e.target.value)}
-              maxLength={4}
-              className="text-center"
-            />
+          <CardContent className="space-y-4 p-6">
+             <div className="text-center">
+                <p className="font-semibold">Waiting for Return</p>
+                <p className="text-sm text-muted-foreground">The borrower has a 4-digit return code. Enter it below to confirm you have the item back.</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="return-code" className="sr-only">Return Code</Label>
+              <Input
+                id="return-code"
+                type="text"
+                placeholder="Enter 4-digit return code"
+                value={verificationCode}
+                onChange={e => setVerificationCode(e.target.value)}
+                maxLength={4}
+                className="text-center"
+              />
+            </div>
             <Button
               className="w-full"
               onClick={verifyReturnCode}
               disabled={isProcessing || verificationCode.length !== 4}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Return
+              Confirm Item Returned
             </Button>
           </CardContent>
         );
@@ -365,24 +373,31 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           );
       case 'HANDOVER_PENDING':
         return (
-          <CardContent className="space-y-2 p-6">
-            <p className="text-sm text-center text-muted-foreground">The lender has shared a code with you. Enter it here to confirm you have received the item.</p>
-            <Input
-              type="text"
-              placeholder="Enter 4-digit handover code"
-              value={verificationCode}
-              onChange={e => setVerificationCode(e.target.value)}
-              maxLength={4}
-              className="text-center"
-              disabled={isProcessing}
-            />
+          <CardContent className="space-y-4 p-6">
+            <div className="text-center">
+                <p className="font-semibold">Waiting for Handover</p>
+                <p className="text-sm text-muted-foreground">The lender has a 4-digit code. Enter it below to confirm you have the item.</p>
+            </div>
+            <div className="space-y-2">
+                <Label htmlFor="handover-code" className="sr-only">Handover Code</Label>
+                <Input
+                  id="handover-code"
+                  type="text"
+                  placeholder="Enter 4-digit code"
+                  value={verificationCode}
+                  onChange={e => setVerificationCode(e.target.value)}
+                  maxLength={4}
+                  className="text-center"
+                  disabled={isProcessing}
+                />
+            </div>
             <Button
               className="w-full"
               onClick={verifyHandoverCode}
               disabled={isProcessing || verificationCode.length !== 4}
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Handover
+              Verify You Have the Item
             </Button>
           </CardContent>
         );
