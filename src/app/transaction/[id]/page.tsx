@@ -252,10 +252,12 @@ function LenderView({ transaction }: { transaction: Transaction }) {
     }
   };
 
+  const canCancel = transaction.status === 'CREATED' || transaction.status === 'HANDOVER_PENDING';
+
   return (
       <>
         {renderContent()}
-        {(transaction.status === 'CREATED') && (
+        {canCancel && (
             <CardFooter>
                 <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive" onClick={handleCancel} disabled={isProcessing}>Cancel Transaction</Button>
             </CardFooter>
@@ -289,18 +291,15 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     setIsProcessing(false);
   };
   
-    const handleCancel = async () => {
-      setIsProcessing(true);
-      try {
-          // A borrower can only cancel if the transaction has just been created.
-          if (transaction.status === 'CREATED') {
-            await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
-            toast({ title: 'Transaction Cancelled' });
-          }
-      } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Error', description: error.message });
-      }
-      setIsProcessing(false);
+  const handleCancel = async () => {
+    setIsProcessing(true);
+    try {
+        await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+        toast({ title: 'Transaction Cancelled' });
+    } catch (error: any) {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+    setIsProcessing(false);
   }
 
   const renderContent = () => {
@@ -355,11 +354,13 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         return null;
     }
   };
+
+  const canCancel = transaction.status === 'CREATED' || transaction.status === 'HANDOVER_PENDING';
   
   return (
       <>
         {renderContent()}
-        {(transaction.status === 'CREATED') && (
+        {canCancel && (
             <CardFooter>
                 <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive" onClick={handleCancel} disabled={isProcessing}>Cancel Transaction</Button>
             </CardFooter>
