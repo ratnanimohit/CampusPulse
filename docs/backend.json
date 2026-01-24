@@ -286,6 +286,37 @@
         "rating",
         "createdAt"
       ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single chat message within a transaction.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID for the message."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "The UID of the user sending the message."
+        },
+        "text": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the message was sent."
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "text",
+        "createdAt"
+      ]
     }
   },
   "auth": {
@@ -357,6 +388,26 @@
             {
               "name": "feedbackId",
               "description": "The unique identifier for the feedback."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/transactions/{transactionId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores chat messages for a specific transaction.",
+          "params": [
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for the transaction."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message."
             }
           ]
         }

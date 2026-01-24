@@ -33,6 +33,9 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { useJsApiLoader, GoogleMap, Marker } from '@react-google-maps/api';
 import { MapLoadError } from '@/components/map-load-error';
 import { FeedbackForm } from '@/components/feedback-form';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatInterface } from "@/components/chat-interface";
+
 
 export type Transaction = {
   id: string;
@@ -488,56 +491,69 @@ export default function TransactionPage() {
 
   return (
     <div className="flex justify-center items-start pt-10">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-           <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
-             <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item"/>
-          </div>
-          <CardTitle className="font-headline text-2xl">{transaction.itemName}</CardTitle>
-          <div className="flex justify-between items-center text-sm">
-             <Badge variant={getStatusBadgeVariant()}>{transaction.status.replace(/_/g, ' ')}</Badge>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <KeyRound className="h-4 w-4" />
-                <span className="font-bold text-primary">{transaction.karma}</span> Karma
-            </div>
-          </div>
-           <CardDescription>
-            You are the <span className="font-semibold">{userRole}</span>.
-          </CardDescription>
-        </CardHeader>
-        
-        <CardContent className="pb-4">
-            <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                Meeting Location
-            </h3>
-            <div className="h-56 w-full rounded-lg overflow-hidden border">
-                {loadError ? (
-                    <MapLoadError loadError={loadError} />
-                ) : !isLoaded ? (
-                    <div className="h-full flex items-center justify-center bg-muted">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
-                ) : transaction.location ? (
-                    <GoogleMap
-                        mapContainerStyle={mapContainerStyle}
-                        center={transaction.location}
-                        zoom={15}
-                        options={mapOptions}
-                    >
-                        <Marker position={transaction.location} />
-                    </GoogleMap>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
-                        <p className="text-sm text-muted-foreground">Location data not provided for this transaction.</p>
-                    </div>
-                )}
-            </div>
-        </CardContent>
+        <Card className="w-full max-w-md overflow-hidden">
+            <Tabs defaultValue="details">
+                <TabsList className="grid w-full grid-cols-2 rounded-none">
+                    <TabsTrigger value="details" className="rounded-none">Details</TabsTrigger>
+                    <TabsTrigger value="chat" className="rounded-none">Chat</TabsTrigger>
+                </TabsList>
+                <TabsContent value="details">
+                    <CardHeader>
+                        <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
+                            <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item"/>
+                        </div>
+                        <CardTitle className="font-headline text-2xl">{transaction.itemName}</CardTitle>
+                        <div className="flex justify-between items-center text-sm">
+                            <Badge variant={getStatusBadgeVariant()}>{transaction.status.replace(/_/g, ' ')}</Badge>
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                                <KeyRound className="h-4 w-4" />
+                                <span className="font-bold text-primary">{transaction.karma}</span> Karma
+                            </div>
+                        </div>
+                        <CardDescription>
+                            You are the <span className="font-semibold">{userRole}</span>.
+                        </CardDescription>
+                    </CardHeader>
+                    
+                    <CardContent className="pb-4">
+                        <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            Meeting Location
+                        </h3>
+                        <div className="h-56 w-full rounded-lg overflow-hidden border">
+                            {loadError ? (
+                                <MapLoadError loadError={loadError} />
+                            ) : !isLoaded ? (
+                                <div className="h-full flex items-center justify-center bg-muted">
+                                    <Loader2 className="h-8 w-8 animate-spin" />
+                                </div>
+                            ) : transaction.location ? (
+                                <GoogleMap
+                                    mapContainerStyle={mapContainerStyle}
+                                    center={transaction.location}
+                                    zoom={15}
+                                    options={mapOptions}
+                                >
+                                    <Marker position={transaction.location} />
+                                </GoogleMap>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
+                                    <p className="text-sm text-muted-foreground">Location data not provided for this transaction.</p>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
 
-        {isFulfiller && <LenderView transaction={transaction} />}
-        {isRequester && <BorrowerView transaction={transaction} />}
-      </Card>
+                    {isFulfiller && <LenderView transaction={transaction} />}
+                    {isRequester && <BorrowerView transaction={transaction} />}
+                </TabsContent>
+                <TabsContent value="chat" className="m-0">
+                    <div className="h-[calc(80vh-100px)] md:h-[700px] border-t">
+                        <ChatInterface transactionId={transaction.id} />
+                    </div>
+                </TabsContent>
+            </Tabs>
+        </Card>
     </div>
   );
 }
