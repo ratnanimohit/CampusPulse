@@ -119,17 +119,17 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   const generateHandoverCode = async () => {
     if (transaction.status !== 'CREATED') return;
 
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    // Set state before async operation to ensure it's available for the next render
-    setGeneratedCode(code);
     setIsProcessing(true);
-
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    
     try {
       await updateDoc(transactionDocRef, {
         status: 'HANDOVER_PENDING',
         handoverCodeHash: simpleHash(code),
         updatedAt: serverTimestamp(),
       });
+      // Set state after async operation to ensure it's available for the next render
+      setGeneratedCode(code);
       toast({
         title: 'Code Generated',
         description: 'Share this code with the requester.',
@@ -140,8 +140,6 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         title: 'Error',
         description: error.message,
       });
-      // Rollback state on error
-      setGeneratedCode(null);
     } finally {
         setIsProcessing(false);
     }
@@ -232,9 +230,9 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         }
         return (
           <CardContent className="text-center text-muted-foreground p-6">
-            <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+            <p>A handover code has been generated.</p>
             <p className="mt-2">
-                A handover code was generated. Waiting for requester to verify...
+                Waiting for the borrower to verify receipt of the item.
             </p>
           </CardContent>
         );
@@ -413,9 +411,9 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         }
         return (
             <CardContent className="text-center text-muted-foreground p-6">
-                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                <p>A return code has been generated.</p>
                 <p className="mt-2">
-                    A return code was generated. Waiting for lender to verify...
+                    Waiting for the lender to verify the return.
                 </p>
             </CardContent>
         )
