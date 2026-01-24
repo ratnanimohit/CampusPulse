@@ -47,7 +47,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/100/100`} alt={displayName} data-ai-hint="person avatar" />
+            <AvatarImage src={user.photoURL || ''} alt={displayName} data-ai-hint="person avatar" />
             <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
           </Avatar>
         </Button>

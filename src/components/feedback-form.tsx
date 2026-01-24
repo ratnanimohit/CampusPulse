@@ -127,7 +127,7 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
           // Denormalize rater's info for easier display
           raterFirstName: raterData.firstName || 'Anonymous',
           raterLastName: raterData.lastName || '',
-          raterPhotoURL: raterUser?.photoURL || `https://picsum.photos/seed/${raterId}/100/100`,
+          raterPhotoURL: raterUser?.photoURL || '',
         });
       });
 
