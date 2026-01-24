@@ -37,9 +37,10 @@ interface FeedbackFormProps {
   transactionId: string;
   ratedUserId: string;
   raterId: string;
+  baseKarma: number;
 }
 
-export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFormProps) {
+export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }: FeedbackFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [rating, setRating] = useState(0);
@@ -53,6 +54,13 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
       comment: '',
     },
   });
+
+  const calculateKarmaPoints = (rating: number, baseKarmaValue: number): number => {
+    if (rating < 1 || rating > 5) return 0; // Handle edge cases
+    // 1 star = 20%, 2 stars = 40%, ..., 5 stars = 100%
+    const percentage = rating * 0.2;
+    return Math.round(baseKarmaValue * percentage);
+  };
 
   async function onSubmit(data: FeedbackFormValues) {
     if (rating === 0) {
@@ -83,6 +91,8 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
           throw new Error('Rater user profile not found!');
         }
 
+        const karmaToAward = calculateKarmaPoints(rating, baseKarma);
+
         const currentData = ratedUserDoc.data();
         const oldRating = currentData.averageRating || 0;
         const oldRatingCount = currentData.ratingsCount || 0;
@@ -93,13 +103,14 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
         const raterData = raterDoc.data();
         const raterUser = getAuth().currentUser;
 
-        // 1. Update the rated user's profile
+        // 1. Update the rated user's profile with new rating and calculated karma
         transaction.update(ratedUserRef, {
           averageRating: newAverageRating,
           ratingsCount: newRatingCount,
+          karmaPoints: increment(karmaToAward),
         });
 
-        // 2. Give the rater karma points for providing feedback
+        // 2. Give the rater karma points for providing feedback (incentive)
         transaction.update(raterRef, {
           karmaPoints: increment(5),
         });
@@ -122,7 +133,7 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
 
       toast({
         title: 'Feedback Submitted!',
-        description: "You've earned 5 karma points. Thank you!",
+        description: "You've earned 5 karma points for rating. Thank you!",
       });
       setFeedbackSubmitted(true);
 

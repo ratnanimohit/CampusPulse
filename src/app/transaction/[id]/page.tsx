@@ -111,19 +111,11 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         updatedAt: serverTimestamp(),
       });
 
-      // 2. Update lender's karma
-      const lenderProfileRef = doc(firestore, 'userProfiles', transaction.fulfillerId);
-      batch.update(lenderProfileRef, { karmaPoints: increment(transaction.karma) });
-      
-      // 3. Update requester's karma
-      const requesterProfileRef = doc(firestore, 'userProfiles', transaction.requesterId);
-      batch.update(requesterProfileRef, { karmaPoints: increment(transaction.karma) });
-
       await batch.commit();
 
       toast({
         title: 'Transaction Completed!',
-        description: `${transaction.karma} karma awarded to both users.`,
+        description: `Please leave feedback to award karma points.`,
       });
     } catch (error: any) {
       console.error("Error completing transaction:", error);
@@ -447,6 +439,7 @@ export default function TransactionPage() {
                                 transactionId={transaction.id}
                                 ratedUserId={ratedUserId}
                                 raterId={user.uid}
+                                baseKarma={transaction.karma}
                            />
                        )
                     )}
