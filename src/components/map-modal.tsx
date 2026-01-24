@@ -106,7 +106,7 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!hasLocation || isFulfilling}>
+          <Button onClick={handleConfirm} disabled={isFulfilling}>
             {isFulfilling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm & Fulfill
           </Button>
