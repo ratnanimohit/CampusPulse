@@ -66,9 +66,6 @@ type Transaction = {
 };
 
 
-// A simple delay function
-const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
-
 const findImageUrl = (itemName: string): string => {
   const lowerItemName = itemName.toLowerCase();
   const foundImage = PlaceHolderImages.find(img => lowerItemName.includes(img.id));
@@ -199,13 +196,10 @@ export default function Dashboard() {
       };
       
       await setDoc(transactionDocRef, transactionData);
-      console.log("Transaction created with ID:", transactionDocRef.id);
-
-      await delay(300);
   
       toast({
         title: 'Request Accepted!',
-        description: `Redirecting to the transaction page.`,
+        description: `Redirecting to transaction...`,
       });
       
       router.push(`/transaction/${transactionDocRef.id}`);

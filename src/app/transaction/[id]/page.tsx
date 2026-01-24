@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import {
@@ -114,53 +114,17 @@ function LenderView({
   isProcessing,
   setIsProcessing,
   generatedCode,
-  setGeneratedCode,
 }: {
   transaction: Transaction;
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
   generatedCode: string | null;
-  setGeneratedCode: (code: string | null) => void;
 }) {
   const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
   const firestore = useFirestore();
   const transactionDocRef = doc(firestore, 'transactions', transaction.id);
 
-  const generateHandoverCode = () => {
-    if (transaction.status !== 'CREATED') return;
-
-    setIsProcessing(true);
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    // Optimistically set the code in the parent state to display it immediately.
-    setGeneratedCode(code);
-
-    updateDoc(transactionDocRef, {
-      status: 'HANDOVER_PENDING',
-      handoverCodeHash: simpleHash(code),
-      updatedAt: serverTimestamp(),
-    })
-    .then(() => {
-      toast({
-        title: 'Code Generated',
-        description: 'Share this code with the requester.',
-      });
-    })
-    .catch((error: any) => {
-      // If the DB update fails, revert the optimistic update.
-      setGeneratedCode(null);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message,
-      });
-    })
-    .finally(() => {
-      setIsProcessing(false);
-    });
-  };
-  
   const verifyReturnCode = async () => {
     if (transaction.status !== 'RETURN_PENDING') {
       toast({ variant: 'destructive', title: 'Invalid State', description: 'Cannot verify return at this stage.' });
@@ -219,16 +183,10 @@ function LenderView({
     switch (transaction.status) {
       case 'CREATED':
         return (
-          <CardFooter>
-            <Button
-              className="w-full"
-              onClick={generateHandoverCode}
-              disabled={isProcessing}
-            >
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Generate Handover Code
-            </Button>
-          </CardFooter>
+          <CardContent className="text-center p-6">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="mt-2 text-sm text-muted-foreground">Generating handover code...</p>
+          </CardContent>
         );
       case 'HANDOVER_PENDING':
         if (generatedCode) {
@@ -363,10 +321,10 @@ function BorrowerView({
   
   const generateReturnCode = () => {
     if (transaction.status !== 'ACTIVE') return;
+    
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
     
-    // Optimistically set the code in the parent state to display it immediately.
     setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
@@ -378,7 +336,6 @@ function BorrowerView({
         toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
       })
       .catch((error: any) => {
-        // If the DB update fails, revert the optimistic update.
         setGeneratedCode(null);
         toast({ variant: 'destructive', title: 'Error', description: error.message });
       })
@@ -498,6 +455,7 @@ export default function TransactionPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
 
   // State for UI that is lifted from child components
   const [isProcessing, setIsProcessing] = useState(false);
@@ -556,6 +514,47 @@ export default function TransactionPage() {
     [firestore, id, user]
   );
   const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
+
+
+  const autoGenerateHandoverCode = useCallback(() => {
+    if (!transaction || !firestore || isProcessing) return;
+
+    setIsProcessing(true);
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedCode(code); // Optimistic update for immediate display
+
+    const transactionDocRef = doc(firestore, 'transactions', transaction.id);
+
+    updateDoc(transactionDocRef, {
+      status: 'HANDOVER_PENDING',
+      handoverCodeHash: simpleHash(code),
+      updatedAt: serverTimestamp(),
+    })
+    .then(() => {
+      toast({
+        title: 'Code Generated',
+        description: 'Share this code with the requester.',
+      });
+    })
+    .catch((error: any) => {
+      setGeneratedCode(null); // Revert on failure
+      toast({
+        variant: 'destructive',
+        title: 'Error Generating Code',
+        description: error.message || 'Could not automatically generate code.',
+      });
+    })
+    .finally(() => {
+      setIsProcessing(false);
+    });
+  }, [transaction, firestore, isProcessing, toast]);
+
+  // Auto-generate handover code for the lender on first view
+  useEffect(() => {
+    if (transaction && user && transaction.status === 'CREATED' && transaction.fulfillerId === user.uid) {
+      autoGenerateHandoverCode();
+    }
+  }, [transaction, user, autoGenerateHandoverCode]);
 
 
   const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback || isLoadingLender || isLoadingRequester;
@@ -697,7 +696,6 @@ export default function TransactionPage() {
                         isProcessing={isProcessing}
                         setIsProcessing={setIsProcessing}
                         generatedCode={generatedCode}
-                        setGeneratedCode={setGeneratedCode}
                       />
                     )}
                     {isRequester && (
