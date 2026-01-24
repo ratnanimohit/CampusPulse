@@ -122,6 +122,8 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Optimistically set the code in the state to display it immediately.
+    setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
       status: 'HANDOVER_PENDING',
@@ -129,13 +131,14 @@ function LenderView({ transaction }: { transaction: Transaction }) {
       updatedAt: serverTimestamp(),
     })
     .then(() => {
-      setGeneratedCode(code);
       toast({
         title: 'Code Generated',
         description: 'Share this code with the requester.',
       });
     })
     .catch((error: any) => {
+      // If the DB update fails, revert the optimistic update.
+      setGeneratedCode(null);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -341,6 +344,8 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     if (transaction.status !== 'ACTIVE') return;
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Optimistically set the code in the state to display it immediately.
+    setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
       status: 'RETURN_PENDING',
@@ -348,10 +353,11 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
       updatedAt: serverTimestamp(),
     })
       .then(() => {
-        setGeneratedCode(code);
         toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
       })
       .catch((error: any) => {
+        // If the DB update fails, revert the optimistic update.
+        setGeneratedCode(null);
         toast({ variant: 'destructive', title: 'Error', description: error.message });
       })
       .finally(() => {
