@@ -12,6 +12,7 @@ export function MapLoadError({ loadError }: MapLoadErrorProps) {
   const { toast } = useToast();
   const isBillingError = loadError.message.includes('BillingNotEnabledMapError');
   const isInvalidKeyError = loadError.message.includes('InvalidKeyMapError');
+  const isApiProjectError = loadError.message.includes('ApiProjectMapError');
 
   let title = "Map Error";
   let description = "Could not load the map. Please try again later.";
@@ -22,7 +23,11 @@ export function MapLoadError({ loadError }: MapLoadErrorProps) {
   } else if (isInvalidKeyError) {
     title = "Invalid Google Maps API Key";
     description = "The provided Google Maps API key is invalid. Please check the key in your configuration.";
-  } else {
+  } else if (isApiProjectError) {
+    title = "Google Maps API Not Enabled";
+    description = "The Maps JavaScript API is not enabled for your Google Cloud project. Please enable it in the Google Cloud Console.";
+  }
+   else {
     description = `Could not load map. An unknown error occurred.`;
   }
 
