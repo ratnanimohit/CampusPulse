@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -19,9 +19,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, getDocs } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc, getDocs, orderBy } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
-import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
 
 export type ItemRequest = {
   id: string;
