@@ -109,9 +109,19 @@ const TransactionMap = ({ location }: { location: { lat: number; lng: number } }
 
 // --- RENDER COMPONENTS ---
 
-function LenderView({ transaction }: { transaction: Transaction }) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+function LenderView({
+  transaction,
+  isProcessing,
+  setIsProcessing,
+  generatedCode,
+  setGeneratedCode,
+}: {
+  transaction: Transaction;
+  isProcessing: boolean;
+  setIsProcessing: (isProcessing: boolean) => void;
+  generatedCode: string | null;
+  setGeneratedCode: (code: string | null) => void;
+}) {
   const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -122,7 +132,8 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    // Optimistically set the code in the state to display it immediately.
+    
+    // Optimistically set the code in the parent state to display it immediately.
     setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
@@ -299,9 +310,19 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   );
 }
 
-function BorrowerView({ transaction }: { transaction: Transaction }) {
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+function BorrowerView({
+  transaction,
+  isProcessing,
+  setIsProcessing,
+  generatedCode,
+  setGeneratedCode,
+}: {
+  transaction: Transaction;
+  isProcessing: boolean;
+  setIsProcessing: (isProcessing: boolean) => void;
+  generatedCode: string | null;
+  setGeneratedCode: (code: string | null) => void;
+}) {
   const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -344,7 +365,8 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     if (transaction.status !== 'ACTIVE') return;
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    // Optimistically set the code in the state to display it immediately.
+    
+    // Optimistically set the code in the parent state to display it immediately.
     setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
@@ -476,6 +498,10 @@ export default function TransactionPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+
+  // State for UI that is lifted from child components
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
 
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -665,8 +691,24 @@ export default function TransactionPage() {
                         </div>
                     </CardContent>
 
-                    {isFulfiller && <LenderView transaction={transaction} />}
-                    {isRequester && <BorrowerView transaction={transaction} />}
+                    {isFulfiller && (
+                      <LenderView
+                        transaction={transaction}
+                        isProcessing={isProcessing}
+                        setIsProcessing={setIsProcessing}
+                        generatedCode={generatedCode}
+                        setGeneratedCode={setGeneratedCode}
+                      />
+                    )}
+                    {isRequester && (
+                      <BorrowerView
+                        transaction={transaction}
+                        isProcessing={isProcessing}
+                        setIsProcessing={setIsProcessing}
+                        generatedCode={generatedCode}
+                        setGeneratedCode={setGeneratedCode}
+                      />
+                    )}
                 </TabsContent>
                 <TabsContent value="chat" className="m-0">
                     <div className="h-[calc(80vh-100px)] md:h-[700px] border-t">
