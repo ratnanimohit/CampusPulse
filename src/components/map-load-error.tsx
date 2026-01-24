@@ -1,12 +1,15 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useToast } from '@/hooks/use-toast';
 
 interface MapLoadErrorProps {
   loadError: Error;
 }
 
 export function MapLoadError({ loadError }: MapLoadErrorProps) {
+  const { toast } = useToast();
   const isBillingError = loadError.message.includes('BillingNotEnabledMapError');
   const isInvalidKeyError = loadError.message.includes('InvalidKeyMapError');
 
@@ -22,6 +25,14 @@ export function MapLoadError({ loadError }: MapLoadErrorProps) {
   } else {
     description = `Could not load map. An unknown error occurred.`;
   }
+
+  useEffect(() => {
+    toast({
+        variant: 'destructive',
+        title: title,
+        description: description,
+    })
+  }, [toast, title, description]);
 
   return (
     <div className="h-full w-full flex items-center justify-center bg-destructive/10 p-4">
