@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, getDocs, orderBy } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
+import Link from 'next/link';
 
 export type ItemRequest = {
   id: string;
@@ -34,7 +35,7 @@ export type ItemRequest = {
 // Simplified transaction type for this page's purpose
 export type Transaction = {
   id: string;
-  itemId: string;
+  itemId: string; // This is the ItemRequest ID
   status: string;
 };
 
@@ -42,8 +43,7 @@ export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // We only fetch requests that have NOT been converted to a transaction yet.
-  // This simplifies the page logic and removes race conditions.
+  // Fetches all requests made by the user, sorted by creation date.
   const requestsQuery = useMemoFirebase(
     () =>
       user && firestore
@@ -53,11 +53,12 @@ export default function MyRequestsPage() {
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
   
-  // Find which requests have been picked up and are now transactions
+  // Find transactions associated with the user's requests
   const requestIds = useMemo(() => requests?.map(r => r.id) || [], [requests]);
 
   const transactionsQuery = useMemoFirebase(() => {
       if (!firestore || requestIds.length === 0) return null;
+      // This query finds any transaction that was created from one of our requests.
       return query(
         collection(firestore, 'transactions'), 
         where('itemId', 'in', requestIds),
@@ -68,11 +69,29 @@ export default function MyRequestsPage() {
   
   const { data: associatedTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   
-  // Only show requests that are still "pending" (i.e., have no active transaction)
-  const pendingRequests = useMemo(() => {
+  // Combine request and transaction data to create a unified view.
+  const displayRequests = useMemo(() => {
     if (!requests) return [];
-    const transactionItemIds = new Set(associatedTransactions?.map(t => t.itemId));
-    return requests.filter(r => !transactionItemIds.has(r.id));
+
+    const transactionMap = new Map(associatedTransactions?.map(t => [t.itemId, t]));
+
+    return requests.map(req => {
+        const transaction = transactionMap.get(req.id);
+        if (transaction) {
+            // If a transaction exists, use its status
+            return {
+                ...req,
+                transactionId: transaction.id,
+                status: transaction.status.replace(/_/g, ' ') 
+            };
+        } else {
+            // Otherwise, the request is still pending
+            return {
+                ...req,
+                status: 'Pending'
+            };
+        }
+    });
   }, [requests, associatedTransactions]);
 
 
@@ -96,9 +115,9 @@ export default function MyRequestsPage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">My Pending Requests</CardTitle>
+          <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
           <CardDescription>
-            An overview of your requests that are waiting to be fulfilled. Active rentals can be found on the 'Active Transactions' page.
+            An overview of your requests, both pending and active. Active rentals can be managed on their transaction pages.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -106,7 +125,7 @@ export default function MyRequestsPage() {
             <div className="flex justify-center items-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : pendingRequests && pendingRequests.length > 0 ? (
+          ) : displayRequests && displayRequests.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -117,7 +136,7 @@ export default function MyRequestsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {pendingRequests.map(req => (
+                {displayRequests.map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{req.itemName}</TableCell>
                       <TableCell>
@@ -135,18 +154,26 @@ export default function MyRequestsPage() {
                         </Badge>
                       </TableCell>
                        <TableCell>
-                        <Badge variant="outline">
-                            Pending
+                        <Badge variant={req.status === 'Pending' ? 'outline' : 'default'} className="capitalize">
+                            {req.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                           <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => cancelRequest(req.id)}
-                            >
-                              Cancel
-                            </Button>
+                           {req.status === 'Pending' ? (
+                             <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => cancelRequest(req.id)}
+                              >
+                                Cancel
+                              </Button>
+                           ) : (
+                             <Button asChild size="sm" variant="outline">
+                                <Link href={`/transaction/${(req as any).transactionId}`}>
+                                    View Transaction
+                                </Link>
+                             </Button>
+                           )}
                       </TableCell>
                     </TableRow>
                   )
@@ -157,10 +184,10 @@ export default function MyRequestsPage() {
             <div className="flex flex-col items-center justify-center gap-4 text-center py-20 border border-dashed rounded-lg">
               <FileX className="h-12 w-12 text-muted-foreground" />
               <h3 className="text-2xl font-bold tracking-tight font-headline">
-                You have no pending requests
+                You have no active requests
               </h3>
               <p className="text-sm text-muted-foreground">
-                Create a new request to see it here, or check 'Active Transactions' for ongoing rentals.
+                Create a new request to see it here.
               </p>
             </div>
           )}
