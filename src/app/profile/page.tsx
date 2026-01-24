@@ -1,12 +1,13 @@
 'use client';
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser, useFirestore, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, or, where } from 'firebase/firestore';
+import { doc, collection, query, or, where, orderBy } from 'firebase/firestore';
 import { Loader2, Star } from "lucide-react";
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 type UserProfile = {
     karmaPoints: number;
@@ -23,6 +24,17 @@ type Transaction = {
     fulfillerId: string;
     requesterId: string;
 };
+
+type Feedback = {
+    id: string;
+    rating: number;
+    comment?: string;
+    createdAt: { seconds: number; nanoseconds: number } | any;
+    raterFirstName: string;
+    raterLastName: string;
+    raterPhotoURL: string;
+};
+
 
 const StarRatingDisplay = ({ rating, count }: { rating: number; count: number }) => {
     const fullStars = Math.floor(rating);
@@ -69,6 +81,17 @@ export default function ProfilePage() {
         );
     }, [user, firestore]);
     const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
+    
+    const feedbackQuery = useMemoFirebase(
+        () => user && firestore ? query(
+            collection(firestore, 'feedback'),
+            where('ratedUserId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+        ) : null,
+        [user, firestore]
+    );
+    const { data: feedbacks, isLoading: isLoadingFeedbacks } = useCollection<Feedback>(feedbackQuery);
+
 
     const stats = useMemo(() => {
         if (!transactions || !user) {
@@ -180,6 +203,59 @@ export default function ProfilePage() {
                     </CardContent>
                 </Card>
             </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Recent Feedback</CardTitle>
+                    <CardDescription>What other users are saying about your transactions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoadingFeedbacks ? (
+                        <div className="flex items-center justify-center p-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        </div>
+                    ) : feedbacks && feedbacks.length > 0 ? (
+                        <div className="space-y-4">
+                            {feedbacks.map((feedback, index) => (
+                                <React.Fragment key={feedback.id}>
+                                    <div className="flex gap-4">
+                                        <Avatar>
+                                            <AvatarImage src={feedback.raterPhotoURL} alt={`${feedback.raterFirstName} ${feedback.raterLastName}`} data-ai-hint="person avatar" />
+                                            <AvatarFallback>{`${feedback.raterFirstName?.[0] || 'A'}${feedback.raterLastName?.[0] || ''}`}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <p className="font-semibold">{feedback.raterFirstName} {feedback.raterLastName}</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {new Date(feedback.createdAt.seconds * 1000).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-0.5 my-1">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star
+                                                        key={i}
+                                                        className={cn(
+                                                            "h-4 w-4",
+                                                            i < feedback.rating ? "text-primary fill-primary" : "text-muted-foreground/30"
+                                                        )}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {feedback.comment && <p className="text-sm text-muted-foreground mt-1">{feedback.comment}</p>}
+                                        </div>
+                                    </div>
+                                    {index < feedbacks.length - 1 && <Separator />}
+                                </React.Fragment>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center gap-2 text-center py-10 border border-dashed rounded-lg">
+                             <p className="text-sm text-muted-foreground">
+                                No feedback received yet.
+                            </p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }

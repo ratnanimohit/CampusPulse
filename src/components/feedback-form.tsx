@@ -23,6 +23,7 @@ import {
   serverTimestamp,
   increment,
 } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import { Loader2, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -77,12 +78,20 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
           throw new Error('Rated user profile not found!');
         }
 
+        const raterDoc = await transaction.get(raterRef);
+        if (!raterDoc.exists()) {
+          throw new Error('Rater user profile not found!');
+        }
+
         const currentData = ratedUserDoc.data();
         const oldRating = currentData.averageRating || 0;
         const oldRatingCount = currentData.ratingsCount || 0;
 
         const newRatingCount = oldRatingCount + 1;
         const newAverageRating = ((oldRating * oldRatingCount) + rating) / newRatingCount;
+
+        const raterData = raterDoc.data();
+        const raterUser = getAuth().currentUser;
 
         // 1. Update the rated user's profile
         transaction.update(ratedUserRef, {
@@ -104,6 +113,10 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId }: FeedbackFo
           rating,
           comment: data.comment,
           createdAt: serverTimestamp(),
+          // Denormalize rater's info for easier display
+          raterFirstName: raterData.firstName || 'Anonymous',
+          raterLastName: raterData.lastName || '',
+          raterPhotoURL: raterUser?.photoURL || `https://picsum.photos/seed/${raterId}/100/100`,
         });
       });
 

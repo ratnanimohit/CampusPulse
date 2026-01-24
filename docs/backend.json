@@ -263,6 +263,19 @@
           "type": "string",
           "format": "date-time",
           "description": "Timestamp when the feedback was created."
+        },
+        "raterFirstName": {
+          "type": "string",
+          "description": "First name of the user who gave the feedback."
+        },
+        "raterLastName": {
+          "type": "string",
+          "description": "Last name of the user who gave the feedback."
+        },
+        "raterPhotoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "The photo URL of the person who gave the rating."
         }
       },
       "required": [
