@@ -117,35 +117,34 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   const firestore = useFirestore();
   const transactionDocRef = doc(firestore, 'transactions', transaction.id);
 
-  const generateHandoverCode = async () => {
+  const generateHandoverCode = () => {
     if (transaction.status !== 'CREATED') return;
 
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
 
-    try {
-      await updateDoc(transactionDocRef, {
-        status: 'HANDOVER_PENDING',
-        handoverCodeHash: simpleHash(code),
-        updatedAt: serverTimestamp(),
-      });
-      
-      // Set the state AFTER the async operation is successful
-      setGeneratedCode(code); 
-      
+    updateDoc(transactionDocRef, {
+      status: 'HANDOVER_PENDING',
+      handoverCodeHash: simpleHash(code),
+      updatedAt: serverTimestamp(),
+    })
+    .then(() => {
+      setGeneratedCode(code);
       toast({
         title: 'Code Generated',
         description: 'Share this code with the requester.',
       });
-    } catch (error: any) {
+    })
+    .catch((error: any) => {
       toast({
         variant: 'destructive',
         title: 'Error',
         description: error.message,
       });
-    } finally {
-        setIsProcessing(false);
-    }
+    })
+    .finally(() => {
+      setIsProcessing(false);
+    });
   };
   
   const verifyReturnCode = async () => {
@@ -338,25 +337,26 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     }
   };
   
-  const generateReturnCode = async () => {
+  const generateReturnCode = () => {
     if (transaction.status !== 'ACTIVE') return;
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
 
-    try {
-      await updateDoc(transactionDocRef, {
-        status: 'RETURN_PENDING',
-        returnCodeHash: simpleHash(code),
-        updatedAt: serverTimestamp(),
+    updateDoc(transactionDocRef, {
+      status: 'RETURN_PENDING',
+      returnCodeHash: simpleHash(code),
+      updatedAt: serverTimestamp(),
+    })
+      .then(() => {
+        setGeneratedCode(code);
+        toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
+      })
+      .catch((error: any) => {
+        toast({ variant: 'destructive', title: 'Error', description: error.message });
+      })
+      .finally(() => {
+        setIsProcessing(false);
       });
-      
-      setGeneratedCode(code);
-
-      toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    }
-    setIsProcessing(false);
   };
   
   const handleCancel = async () => {
