@@ -122,20 +122,21 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    
+    setGeneratedCode(code); // Set state first to ensure it's available for the next render
+
     try {
       await updateDoc(transactionDocRef, {
         status: 'HANDOVER_PENDING',
         handoverCodeHash: simpleHash(code),
         updatedAt: serverTimestamp(),
       });
-      // Set state after async operation to ensure it's available for the next render
-      setGeneratedCode(code);
+      
       toast({
         title: 'Code Generated',
         description: 'Share this code with the requester.',
       });
     } catch (error: any) {
+      setGeneratedCode(null); // Revert state on error
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -248,7 +249,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         return (
           <CardContent className="space-y-4 p-6">
              <div className="text-center">
-                <p className="font-semibold">Waiting for Return</p>
+                <p className="font-semibold">Confirm Item Return</p>
                 <p className="text-sm text-muted-foreground">The borrower has a 4-digit return code. Enter it below to confirm you have the item back.</p>
             </div>
             <div className="space-y-2">
@@ -337,15 +338,17 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     if (transaction.status !== 'ACTIVE') return;
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedCode(code); // Set state first
+
     try {
       await updateDoc(transactionDocRef, {
         status: 'RETURN_PENDING',
         returnCodeHash: simpleHash(code),
         updatedAt: serverTimestamp(),
       });
-      setGeneratedCode(code);
       toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
     } catch (error: any) {
+      setGeneratedCode(null); // Revert on error
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
     setIsProcessing(false);
@@ -375,7 +378,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
         return (
           <CardContent className="space-y-4 p-6">
             <div className="text-center">
-                <p className="font-semibold">Waiting for Handover</p>
+                <p className="font-semibold">Confirm Handover</p>
                 <p className="text-sm text-muted-foreground">The lender has a 4-digit code. Enter it below to confirm you have the item.</p>
             </div>
             <div className="space-y-2">
