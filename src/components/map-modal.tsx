@@ -91,7 +91,10 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
         <DialogHeader>
           <DialogTitle>Borrower Location for "{request?.itemName}"</DialogTitle>
           <DialogDescription>
-            This map shows the approximate location of the user who requested the item.
+            {loadError
+                ? "The map is unavailable, but you can still fulfill the request and coordinate via chat."
+                : "This map shows the approximate location of the user who requested the item."
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -103,7 +106,7 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={!hasLocation || isFulfilling || !!loadError}>
+          <Button onClick={handleConfirm} disabled={!hasLocation || isFulfilling}>
             {isFulfilling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Confirm & Fulfill
           </Button>
