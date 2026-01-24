@@ -75,29 +75,15 @@ export default function MyRequestsPage() {
 
   const { data: associatedTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
 
-  // Combine request and transaction data to create a unified view.
+  // Only show requests that have NOT been fulfilled.
   const displayRequests = useMemo(() => {
     if (!myRequests) return [];
 
-    const transactionMap = new Map(associatedTransactions?.map(t => [t.itemId, t]));
+    const fulfilledRequestIds = new Set(associatedTransactions?.map(t => t.itemId));
 
-    return myRequests.map(req => {
-        const transaction = transactionMap.get(req.id);
-        if (transaction) {
-            // If a transaction exists, use its status
-            return {
-                ...req,
-                transactionId: transaction.id,
-                status: transaction.status.replace(/_/g, ' ')
-            };
-        } else {
-            // Otherwise, the request is still pending
-            return {
-                ...req,
-                status: 'Pending'
-            };
-        }
-    });
+    // Only include requests that have not been fulfilled yet.
+    return myRequests.filter(req => !fulfilledRequestIds.has(req.id));
+    
   }, [myRequests, associatedTransactions]);
 
 
@@ -123,7 +109,7 @@ export default function MyRequestsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
           <CardDescription>
-            An overview of your requests, both pending and active. Active rentals can be managed on their transaction pages.
+            An overview of your requests that have not been fulfilled yet.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -160,26 +146,18 @@ export default function MyRequestsPage() {
                         </Badge>
                       </TableCell>
                        <TableCell>
-                        <Badge variant={req.status === 'Pending' ? 'outline' : 'default'} className="capitalize">
-                            {req.status}
+                        <Badge variant="outline">
+                            Pending
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
-                           {req.status === 'Pending' ? (
-                             <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => cancelRequest(req.id)}
-                              >
-                                Cancel
-                              </Button>
-                           ) : (
-                             <Button asChild size="sm" variant="outline">
-                                <Link href={`/transaction/${(req as any).transactionId}`}>
-                                    View Transaction
-                                </Link>
-                             </Button>
-                           )}
+                         <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => cancelRequest(req.id)}
+                          >
+                            Cancel
+                          </Button>
                       </TableCell>
                     </TableRow>
                   )
@@ -190,7 +168,7 @@ export default function MyRequestsPage() {
             <div className="flex flex-col items-center justify-center gap-4 text-center py-20 border border-dashed rounded-lg">
               <FileX className="h-12 w-12 text-muted-foreground" />
               <h3 className="text-2xl font-bold tracking-tight font-headline">
-                You have no active requests
+                You have no pending requests
               </h3>
               <p className="text-sm text-muted-foreground">
                 Create a new request to see it here.
