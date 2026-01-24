@@ -207,14 +207,24 @@ function LenderView({ transaction }: { transaction: Transaction }) {
           </CardFooter>
         );
       case 'HANDOVER_PENDING':
+        if (generatedCode) {
+          return (
+            <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
+              <p className="text-muted-foreground">Your handover code is:</p>
+              <p className="text-4xl font-bold tracking-widest my-2">
+                {generatedCode}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Share this with the requester. Waiting for them to verify...
+              </p>
+            </CardContent>
+          );
+        }
         return (
-          <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
-            <p className="text-muted-foreground">Your handover code is:</p>
-            <p className="text-4xl font-bold tracking-widest my-2">
-              {generatedCode || '----'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Share this with the requester. Waiting for them to verify...
+          <CardContent className="text-center text-muted-foreground p-6">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+            <p className="mt-2">
+                A handover code was generated. Waiting for requester to verify...
             </p>
           </CardContent>
         );
@@ -323,13 +333,6 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           </CardContent>
         );
       case 'ACTIVE':
-        if(generatedCode){
-             return <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
-                <p className="text-muted-foreground">Your return code is:</p>
-                <p className="text-4xl font-bold tracking-widest my-2">{generatedCode}</p>
-                <p className="text-xs text-muted-foreground">Share this with the lender to complete the return.</p>
-            </CardContent>
-        }
         return (
           <CardFooter>
             <Button
@@ -343,11 +346,21 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           </CardFooter>
         );
       case 'RETURN_PENDING':
-         return (
+        if (generatedCode) {
+          return (
             <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
               <p className="text-muted-foreground">Your return code is:</p>
-              <p className="text-4xl font-bold tracking-widest my-2">{generatedCode || '----'}</p>
-              <p className="text-xs text-muted-foreground">Waiting for lender to verify...</p>
+              <p className="text-4xl font-bold tracking-widest my-2">{generatedCode}</p>
+              <p className="text-xs text-muted-foreground">Share this with the lender. Waiting for them to verify...</p>
+            </CardContent>
+          );
+        }
+        return (
+            <CardContent className="text-center text-muted-foreground p-6">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+                <p className="mt-2">
+                    A return code was generated. Waiting for lender to verify...
+                </p>
             </CardContent>
         )
       default:
