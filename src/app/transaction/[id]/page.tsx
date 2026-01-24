@@ -7,9 +7,7 @@ import {
   doc,
   updateDoc,
   serverTimestamp,
-  deleteDoc,
   writeBatch,
-  increment,
   collection,
   query,
   where
@@ -163,7 +161,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         updatedAt: serverTimestamp(),
       });
 
-      // 2. Delete the original item request now that the transaction is complete
+      // 2. FIX: Delete the original item request now that the transaction is complete
       if (transaction.itemId) {
           const requestDocRef = doc(firestore, 'itemRequests', transaction.itemId);
           batch.delete(requestDocRef);

@@ -76,8 +76,9 @@ export function VerifyHandoverDialog({ isOpen, onOpenChange, transaction }: Veri
         updatedAt: serverTimestamp(),
       });
       
-      // The original item request is now deleted when the transaction is 'COMPLETED',
-      // not here. This ensures it remains visible on the 'My Requests' page.
+      // FIX: The original item request is NOT deleted here.
+      // It is now deleted only when the transaction is 'COMPLETED'.
+      // This ensures it remains visible on the 'My Requests' page while active.
 
       toast({
         title: 'Handover Verified!',
