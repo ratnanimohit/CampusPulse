@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import {
@@ -51,8 +51,10 @@ export type Transaction = {
     | 'RETURN_PENDING'
     | 'COMPLETED'
     | 'CANCELLED';
+  handoverCode?: string | null;
   handoverCodeHash: string | null;
   handoverVerified: boolean;
+  returnCode?: string | null;
   returnCodeHash: string | null;
   returnVerified: boolean;
   location?: { lat: number; lng: number };
@@ -113,12 +115,10 @@ function LenderView({
   transaction,
   isProcessing,
   setIsProcessing,
-  generatedCode,
 }: {
   transaction: Transaction;
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
-  generatedCode: string | null;
 }) {
   const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
@@ -181,20 +181,13 @@ function LenderView({
 
   const renderContent = () => {
     switch (transaction.status) {
-      case 'CREATED':
-        return (
-          <CardContent className="text-center p-6">
-            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">Generating handover code...</p>
-          </CardContent>
-        );
       case 'HANDOVER_PENDING':
-        if (generatedCode) {
+        if (transaction.handoverCode) {
           return (
             <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
               <p className="text-muted-foreground">Your handover code is:</p>
               <p className="text-4xl font-bold tracking-widest my-2">
-                {generatedCode}
+                {transaction.handoverCode}
               </p>
               <p className="text-xs text-muted-foreground">
                 Share this with the requester. Waiting for them to verify...
@@ -203,14 +196,9 @@ function LenderView({
           );
         }
         return (
-          <CardContent className="text-center text-muted-foreground p-6">
-             <div className="space-y-2">
-                <p className="font-semibold">Code Generated</p>
-                <p className="text-sm">
-                    A handover code has been generated. Waiting for the borrower to verify receipt of the item.
-                </p>
-                 <p className="text-xs">(If you reloaded the page, the code won't be shown again for security.)</p>
-            </div>
+          <CardContent className="text-center p-6">
+            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
+            <p className="mt-2 text-sm text-muted-foreground">Waiting for handover code...</p>
           </CardContent>
         );
       case 'ACTIVE':
@@ -272,14 +260,10 @@ function BorrowerView({
   transaction,
   isProcessing,
   setIsProcessing,
-  generatedCode,
-  setGeneratedCode,
 }: {
   transaction: Transaction;
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
-  generatedCode: string | null;
-  setGeneratedCode: (code: string | null) => void;
 }) {
   const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
@@ -324,11 +308,10 @@ function BorrowerView({
     
     setIsProcessing(true);
     const code = Math.floor(1000 + Math.random() * 9000).toString();
-    
-    setGeneratedCode(code);
 
     updateDoc(transactionDocRef, {
       status: 'RETURN_PENDING',
+      returnCode: code,
       returnCodeHash: simpleHash(code),
       updatedAt: serverTimestamp(),
     })
@@ -336,7 +319,6 @@ function BorrowerView({
         toast({ title: 'Return Initiated', description: 'Share this code with the lender.' });
       })
       .catch((error: any) => {
-        setGeneratedCode(null);
         toast({ variant: 'destructive', title: 'Error', description: error.message });
       })
       .finally(() => {
@@ -357,14 +339,6 @@ function BorrowerView({
 
   const renderContent = () => {
     switch (transaction.status) {
-      case 'CREATED':
-        return (
-            <CardContent className="text-center text-muted-foreground p-6">
-              <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-              <p className="mt-2 font-semibold">Waiting for lender...</p>
-              <p className="text-sm">The lender will generate a 4-digit code for the handover.</p>
-            </CardContent>
-          );
       case 'HANDOVER_PENDING':
         return (
           <CardContent className="space-y-4 p-6">
@@ -409,11 +383,11 @@ function BorrowerView({
           </CardFooter>
         );
       case 'RETURN_PENDING':
-        if (generatedCode) {
+        if (transaction.returnCode) {
           return (
             <CardContent className="text-center p-4 border-dashed border-2 rounded-lg m-6 mt-0">
               <p className="text-muted-foreground">Your return code is:</p>
-              <p className="text-4xl font-bold tracking-widest my-2">{generatedCode}</p>
+              <p className="text-4xl font-bold tracking-widest my-2">{transaction.returnCode}</p>
               <p className="text-xs text-muted-foreground">Share this with the lender. Waiting for them to verify...</p>
             </CardContent>
           );
@@ -423,14 +397,19 @@ function BorrowerView({
                 <div className="space-y-2">
                     <p className="font-semibold">Return Initiated</p>
                     <p className="text-sm">
-                        You've generated a return code. Waiting for the lender to verify the return.
+                        Waiting for the lender to verify the return.
                     </p>
-                     <p className="text-xs">(If you reloaded the page, the code won't be shown again for security.)</p>
                 </div>
             </CardContent>
         )
       default:
-        return null;
+         return (
+            <CardContent className="text-center text-muted-foreground p-6">
+              <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+              <p className="mt-2 font-semibold">Waiting for lender...</p>
+              <p className="text-sm">The lender will generate a 4-digit code for the handover.</p>
+            </CardContent>
+          );
     }
   };
 
@@ -455,12 +434,8 @@ export default function TransactionPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
 
-  // State for UI that is lifted from child components
   const [isProcessing, setIsProcessing] = useState(false);
-  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
-
   const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const transactionDocRef = useMemoFirebase(
@@ -514,48 +489,6 @@ export default function TransactionPage() {
     [firestore, id, user]
   );
   const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
-
-
-  const autoGenerateHandoverCode = useCallback(() => {
-    if (!transaction || !firestore || isProcessing) return;
-
-    setIsProcessing(true);
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    setGeneratedCode(code); // Optimistic update for immediate display
-
-    const transactionDocRef = doc(firestore, 'transactions', transaction.id);
-
-    updateDoc(transactionDocRef, {
-      status: 'HANDOVER_PENDING',
-      handoverCodeHash: simpleHash(code),
-      updatedAt: serverTimestamp(),
-    })
-    .then(() => {
-      toast({
-        title: 'Code Generated',
-        description: 'Share this code with the requester.',
-      });
-    })
-    .catch((error: any) => {
-      setGeneratedCode(null); // Revert on failure
-      toast({
-        variant: 'destructive',
-        title: 'Error Generating Code',
-        description: error.message || 'Could not automatically generate code.',
-      });
-    })
-    .finally(() => {
-      setIsProcessing(false);
-    });
-  }, [transaction, firestore, isProcessing, toast]);
-
-  // Auto-generate handover code for the lender on first view
-  useEffect(() => {
-    if (transaction && user && transaction.status === 'CREATED' && transaction.fulfillerId === user.uid) {
-      autoGenerateHandoverCode();
-    }
-  }, [transaction, user, autoGenerateHandoverCode]);
-
 
   const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback || isLoadingLender || isLoadingRequester;
 
@@ -695,7 +628,6 @@ export default function TransactionPage() {
                         transaction={transaction}
                         isProcessing={isProcessing}
                         setIsProcessing={setIsProcessing}
-                        generatedCode={generatedCode}
                       />
                     )}
                     {isRequester && (
@@ -703,8 +635,6 @@ export default function TransactionPage() {
                         transaction={transaction}
                         isProcessing={isProcessing}
                         setIsProcessing={setIsProcessing}
-                        generatedCode={generatedCode}
-                        setGeneratedCode={setGeneratedCode}
                       />
                     )}
                 </TabsContent>

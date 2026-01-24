@@ -138,16 +138,36 @@
             "CANCELLED"
           ]
         },
+        "handoverCode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The 4-digit code for the initial handover, stored in plaintext for display."
+        },
         "handoverCodeHash": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "The hashed 4-digit code for the initial handover."
         },
         "handoverVerified": {
           "type": "boolean",
           "description": "Whether the handover code has been successfully verified."
         },
+        "returnCode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "The 4-digit code for the return, stored in plaintext for display."
+        },
         "returnCodeHash": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "The hashed 4-digit code for the return."
         },
         "returnVerified": {

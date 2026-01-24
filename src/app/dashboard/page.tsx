@@ -213,8 +213,10 @@ export default function Dashboard() {
         itemImageUrl: findImageUrl(request.itemName),
         karma: 10, // Example karma
         status: 'HANDOVER_PENDING',
+        handoverCode: handoverCode,
         handoverCodeHash: simpleHash(handoverCode),
         handoverVerified: false,
+        returnCode: null,
         returnCodeHash: null,
         returnVerified: false,
         createdAt: serverTimestamp(),
