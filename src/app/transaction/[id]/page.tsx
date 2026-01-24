@@ -59,6 +59,11 @@ export type Transaction = {
   location?: { lat: number; lng: number };
 };
 
+type UserProfile = {
+  firstName: string;
+  lastName: string;
+};
+
 // --- RENDER COMPONENTS ---
 
 function LenderView({ transaction }: { transaction: Transaction }) {
@@ -342,6 +347,37 @@ export default function TransactionPage() {
     isLoading: isTransactionLoading,
     error,
   } = useDoc<Transaction>(transactionDocRef);
+  
+  // Fetch lender profile
+  const lenderProfileRef = useMemoFirebase(
+    () => (firestore && transaction ? doc(firestore, 'userProfiles', transaction.fulfillerId) : null),
+    [firestore, transaction]
+  );
+  const { data: lenderProfile, isLoading: isLoadingLender } = useDoc<UserProfile>(lenderProfileRef);
+
+
+  // Fetch requester profile
+  const requesterProfileRef = useMemoFirebase(
+    () => (firestore && transaction ? doc(firestore, 'userProfiles', transaction.requesterId) : null),
+    [firestore, transaction]
+  );
+  const { data: requesterProfile, isLoading: isLoadingRequester } = useDoc<UserProfile>(requesterProfileRef);
+
+  const participants = useMemo(() => {
+    if (!lenderProfile || !requesterProfile || !transaction) return [];
+    return [
+        {
+            id: transaction.fulfillerId,
+            name: `${lenderProfile.firstName} ${lenderProfile.lastName}`,
+            avatar: '',
+        },
+        {
+            id: transaction.requesterId,
+            name: `${requesterProfile.firstName} ${requesterProfile.lastName}`,
+            avatar: '',
+        },
+    ];
+  }, [lenderProfile, requesterProfile, transaction]);
 
   const feedbackQuery = useMemoFirebase(
     () => (firestore && id && user) ? query(
@@ -354,7 +390,7 @@ export default function TransactionPage() {
   const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
 
 
-  const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback;
+  const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback || isLoadingLender || isLoadingRequester;
 
   if (isLoading) {
     return (
@@ -514,7 +550,13 @@ export default function TransactionPage() {
                 </TabsContent>
                 <TabsContent value="chat" className="m-0">
                     <div className="h-[calc(80vh-100px)] md:h-[700px] border-t">
-                        <ChatInterface transactionId={transaction.id} />
+                        {participants.length > 0 ? (
+                           <ChatInterface transactionId={transaction.id} participants={participants} />
+                        ): (
+                            <div className="flex items-center justify-center h-full">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                            </div>
+                        )}
                     </div>
                 </TabsContent>
             </Tabs>

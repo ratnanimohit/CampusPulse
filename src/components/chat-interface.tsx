@@ -13,8 +13,7 @@ import { Loader2, Send } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback } from './ui/avatar';
-import { doc, getDoc } from 'firebase/firestore';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 
 
 type Message = {
@@ -90,11 +89,18 @@ export function ChatInterface({ transactionId, participants }: ChatInterfaceProp
         }
     }, [messages]);
 
-    const getParticipantInitial = (senderId: string) => {
+    const getParticipantInfo = (senderId: string) => {
         const participant = participants.find(p => p.id === senderId);
-        if (!participant) return "?";
+        if (!participant) {
+            return { name: "Unknown", initial: "?", avatar: "" };
+        };
         const nameParts = participant.name.split(" ");
-        return nameParts.length > 1 ? `${nameParts[0][0]}${nameParts[1][0]}` : nameParts[0][0];
+        const initial = nameParts.length > 1 ? `${nameParts[0][0]}${nameParts[1]?.[0] || ''}` : (nameParts[0]?.[0] || '?');
+        return {
+            name: participant.name,
+            initial: initial.toUpperCase(),
+            avatar: participant.avatar,
+        }
     }
 
     return (
@@ -106,29 +112,33 @@ export function ChatInterface({ transactionId, participants }: ChatInterfaceProp
                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                         </div>
                     ) : messages && messages.length > 0 ? (
-                        messages.map(msg => (
-                            <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
-                                {msg.senderId !== user?.uid && (
-                                     <Avatar className="h-8 w-8">
-                                        <AvatarFallback>{getParticipantInitial(msg.senderId)}</AvatarFallback>
-                                    </Avatar>
-                                )}
-                                <div className={cn(
-                                    "rounded-lg px-3 py-2 max-w-[70%]",
-                                    msg.senderId === user?.uid
-                                        ? "bg-primary text-primary-foreground"
-                                        : "bg-muted"
-                                )}>
-                                    <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
-                                    <p className={cn(
-                                        "text-xs opacity-70 mt-1",
-                                        msg.senderId === user?.uid ? "text-right" : "text-left"
+                        messages.map(msg => {
+                            const participantInfo = getParticipantInfo(msg.senderId);
+                            return (
+                                <div key={msg.id} className={cn("flex items-end gap-2", msg.senderId === user?.uid ? "justify-end" : "justify-start")}>
+                                    {msg.senderId !== user?.uid && (
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={participantInfo.avatar} alt={participantInfo.name} data-ai-hint="person avatar" />
+                                            <AvatarFallback>{participantInfo.initial}</AvatarFallback>
+                                        </Avatar>
+                                    )}
+                                    <div className={cn(
+                                        "rounded-lg px-3 py-2 max-w-[70%]",
+                                        msg.senderId === user?.uid
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted"
                                     )}>
-                                        {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'p') : ''}
-                                    </p>
+                                        <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                                        <p className={cn(
+                                            "text-xs opacity-70 mt-1",
+                                            msg.senderId === user?.uid ? "text-right" : "text-left"
+                                        )}>
+                                            {msg.createdAt?.seconds ? format(new Date(msg.createdAt.seconds * 1000), 'p') : ''}
+                                        </p>
+                                    </div>
                                 </div>
-                            </div>
-                        ))
+                            )
+                        })
                     ) : (
                         <div className="text-center text-sm text-muted-foreground py-10">
                             No messages yet. Start the conversation!
