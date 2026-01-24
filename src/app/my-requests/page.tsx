@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, or, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
 import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
 
@@ -89,9 +89,6 @@ export default function MyRequestsPage() {
   
   const isLoading = isUserLoading || isLoadingRequests || (requestIds.length > 0 && isLoadingTransactions);
   
-  const handleVerifyDialogClose = () => {
-    setVerifyingTransaction(null);
-  };
 
   return (
     <>
@@ -121,7 +118,7 @@ export default function MyRequestsPage() {
                 {requests.map(req => {
                   const transaction = getTransactionForRequest(req.id);
                   const status = transaction ? transaction.status : 'Pending';
-                  const isCancellable = status === 'Pending' || status === 'CREATED' || status === 'HANDOVER_PENDING';
+                  const isCancellable = status === 'Pending' || status === 'CREATED';
 
                   return (
                     <TableRow key={req.id}>
@@ -164,7 +161,7 @@ export default function MyRequestsPage() {
                               Cancel
                             </Button>
                         )}
-                         {transaction && !isCancellable && (
+                         {transaction && !isCancellable && transaction.status !== 'HANDOVER_PENDING' && (
                              <span className="text-sm text-muted-foreground px-3">In Progress</span>
                          )}
                       </TableCell>

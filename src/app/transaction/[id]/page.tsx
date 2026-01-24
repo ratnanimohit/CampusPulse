@@ -206,7 +206,7 @@ function LenderView({ transaction }: { transaction: Transaction }) {
   return (
       <>
         {renderContent()}
-        {(transaction.status === 'CREATED' || transaction.status === 'HANDOVER_PENDING') && (
+        {(transaction.status === 'CREATED') && (
             <CardFooter>
                 <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive" onClick={handleCancel} disabled={isProcessing}>Cancel Transaction</Button>
             </CardFooter>
@@ -217,37 +217,10 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 
 function BorrowerView({ transaction }: { transaction: Transaction }) {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const { toast } = useToast();
   const firestore = useFirestore();
   const transactionDocRef = doc(firestore, 'transactions', transaction.id);
-
-   const verifyHandoverCode = async () => {
-    if (transaction.status !== 'HANDOVER_PENDING') {
-      toast({ variant: 'destructive', title: 'Invalid State', description: 'Cannot verify handover at this stage.' });
-      return;
-    }
-    if (simpleHash(verificationCode) !== transaction.handoverCodeHash) {
-      toast({ variant: 'destructive', title: 'Invalid Handover Code' });
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      await updateDoc(transactionDocRef, {
-        handoverVerified: true,
-        status: 'ACTIVE',
-        updatedAt: serverTimestamp(),
-      });
-      if (transaction.itemId) {
-        deleteDoc(doc(firestore, 'itemRequests', transaction.itemId)).catch(console.error);
-      }
-      toast({ title: 'Handover Complete!', description: 'You now have the item.' });
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    }
-    setIsProcessing(false);
-  };
   
   const generateReturnCode = async () => {
     if (transaction.status !== 'ACTIVE') return;
@@ -270,8 +243,11 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
     const handleCancel = async () => {
       setIsProcessing(true);
       try {
-          await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
-          toast({ title: 'Transaction Cancelled' });
+          // A borrower can only cancel if the transaction has just been created.
+          if (transaction.status === 'CREATED') {
+            await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+            toast({ title: 'Transaction Cancelled' });
+          }
       } catch (error: any) {
           toast({ variant: 'destructive', title: 'Error', description: error.message });
       }
@@ -289,24 +265,13 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           );
       case 'HANDOVER_PENDING':
         return (
-          <CardContent className="space-y-2 p-6">
-             <p className="text-sm text-center text-muted-foreground">Lender has generated a code. Enter it below to confirm handover.</p>
-            <Input
-              type="text"
-              placeholder="Enter 4-digit handover code"
-              value={verificationCode}
-              onChange={e => setVerificationCode(e.target.value)}
-              maxLength={4}
-              className="text-center"
-            />
-            <Button
-              className="w-full"
-              onClick={verifyHandoverCode}
-              disabled={isProcessing || verificationCode.length !== 4}
-            >
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify Handover
-            </Button>
+          <CardContent className="p-6">
+             <Alert>
+                <AlertTitle>Action Required</AlertTitle>
+                <AlertDescription>
+                    Please go to your 'My Requests' page to enter the handover code and verify you have received the item.
+                </AlertDescription>
+            </Alert>
           </CardContent>
         );
       case 'ACTIVE':
@@ -345,7 +310,7 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
   return (
       <>
         {renderContent()}
-        {(transaction.status === 'CREATED' || transaction.status === 'HANDOVER_PENDING') && (
+        {(transaction.status === 'CREATED') && (
             <CardFooter>
                 <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive" onClick={handleCancel} disabled={isProcessing}>Cancel Transaction</Button>
             </CardFooter>

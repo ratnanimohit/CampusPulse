@@ -63,6 +63,7 @@ export function VerifyHandoverDialog({ isOpen, onOpenChange, transaction }: Veri
         title: 'Invalid Code',
         description: 'The handover code is incorrect. Please try again.',
       });
+      form.setValue('code', '');
       return;
     }
 
