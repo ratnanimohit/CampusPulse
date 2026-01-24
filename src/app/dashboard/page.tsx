@@ -99,7 +99,12 @@ export default function Dashboard() {
     ) : null,
     [firestore]
   );
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+  const { data: allRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+
+  const communityRequests = useMemo(() => {
+    if (!allRequests || !user) return [];
+    return allRequests.filter(req => req.requesterId !== user.uid);
+  }, [allRequests, user]);
 
   // Fetch user profile for karma points
    const userProfileRef = useMemoFirebase(
@@ -416,7 +421,7 @@ export default function Dashboard() {
                 Community Requests
               </CardTitle>
               <CardDescription>
-                Active item requests on campus.
+                Help out a fellow student by fulfilling one of these active requests.
               </CardDescription>
             </div>
           </CardHeader>
@@ -425,7 +430,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-center p-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
-            ) : requests && requests.length > 0 ? (
+            ) : communityRequests && communityRequests.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -435,7 +440,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests.slice(0, 3).map(req => (
+                  {communityRequests.slice(0, 3).map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">
                         {req.itemName}
