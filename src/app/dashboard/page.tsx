@@ -30,6 +30,7 @@ import {
   doc,
   serverTimestamp,
   or,
+  orderBy,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
@@ -44,6 +45,7 @@ type ItemRequest = {
     lat: number;
     lng: number;
   };
+  createdAt?: any;
 };
 
 type UserProfile = {
@@ -91,11 +93,11 @@ export default function Dashboard() {
 
   // Fetch community requests
   const requestsQuery = useMemoFirebase(
-    () => firestore && user ? query(
-        collection(firestore, 'itemRequests'), 
-        where('requesterId', '!=', user.uid)
+    () => firestore ? query(
+        collection(firestore, 'itemRequests'),
+        orderBy('createdAt', 'desc')
     ) : null,
-    [firestore, user]
+    [firestore]
   );
   const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
@@ -414,7 +416,7 @@ export default function Dashboard() {
                 Community Requests
               </CardTitle>
               <CardDescription>
-                Items being requested by others on campus.
+                Active item requests on campus.
               </CardDescription>
             </div>
           </CardHeader>

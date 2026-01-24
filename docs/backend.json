@@ -218,6 +218,11 @@
               "type": "number"
             }
           }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the request was created."
         }
       },
       "required": [
@@ -226,7 +231,8 @@
         "itemName",
         "reason",
         "urgency",
-        "requiredBy"
+        "requiredBy",
+        "createdAt"
       ]
     },
     "Feedback": {

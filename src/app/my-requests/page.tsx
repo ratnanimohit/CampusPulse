@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, serverTimestamp, deleteDoc, orderBy } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
 import { VerifyHandoverDialog } from '@/components/verify-handover-dialog';
 
@@ -29,6 +29,7 @@ export type ItemRequest = {
   urgency: 'emergency' | 'medium' | 'normal';
   requiredBy: string;
   requesterId: string;
+  createdAt?: any;
 };
 
 export type Transaction = {
@@ -46,7 +47,7 @@ export default function MyRequestsPage() {
   const requestsQuery = useMemoFirebase(
     () =>
       user && firestore
-        ? query(collection(firestore, 'itemRequests'), where('requesterId', '==', user.uid))
+        ? query(collection(firestore, 'itemRequests'), where('requesterId', '==', user.uid), orderBy('createdAt', 'desc'))
         : null,
     [user, firestore]
   );

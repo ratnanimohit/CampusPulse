@@ -32,7 +32,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -98,6 +98,7 @@ export default function RequestsPage() {
         ...data,
         id: newRequestRef.id,
         requesterId: user.uid,
+        createdAt: serverTimestamp(),
         ...(location && { location })
     };
 
