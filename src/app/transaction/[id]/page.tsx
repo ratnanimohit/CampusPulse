@@ -118,15 +118,18 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 
   const generateHandoverCode = async () => {
     if (transaction.status !== 'CREATED') return;
-    setIsProcessing(true);
+
     const code = Math.floor(1000 + Math.random() * 9000).toString();
+    // Set state before async operation to ensure it's available for the next render
+    setGeneratedCode(code);
+    setIsProcessing(true);
+
     try {
       await updateDoc(transactionDocRef, {
         status: 'HANDOVER_PENDING',
         handoverCodeHash: simpleHash(code),
         updatedAt: serverTimestamp(),
       });
-      setGeneratedCode(code);
       toast({
         title: 'Code Generated',
         description: 'Share this code with the requester.',
@@ -137,8 +140,11 @@ function LenderView({ transaction }: { transaction: Transaction }) {
         title: 'Error',
         description: error.message,
       });
+      // Rollback state on error
+      setGeneratedCode(null);
+    } finally {
+        setIsProcessing(false);
     }
-    setIsProcessing(false);
   };
   
   const verifyReturnCode = async () => {
@@ -283,9 +289,43 @@ function LenderView({ transaction }: { transaction: Transaction }) {
 function BorrowerView({ transaction }: { transaction: Transaction }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
   const { toast } = useToast();
   const firestore = useFirestore();
   const transactionDocRef = doc(firestore, 'transactions', transaction.id);
+
+  const verifyHandoverCode = async () => {
+    if (transaction.status !== 'HANDOVER_PENDING') return;
+    if (simpleHash(verificationCode) !== transaction.handoverCodeHash) {
+      toast({
+        variant: 'destructive',
+        title: 'Invalid Code',
+        description: 'The handover code is incorrect. Please try again.',
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      await updateDoc(transactionDocRef, {
+        handoverVerified: true,
+        status: 'ACTIVE',
+        updatedAt: serverTimestamp(),
+      });
+      toast({
+        title: 'Handover Verified!',
+        description: 'The transaction is now active. You can initiate a return when ready.',
+      });
+    } catch (error: any) {
+       toast({
+        variant: 'destructive',
+        title: 'Verification Failed',
+        description: error.message || 'An unexpected error occurred.',
+      });
+    } finally {
+        setIsProcessing(false);
+    }
+  };
   
   const generateReturnCode = async () => {
     if (transaction.status !== 'ACTIVE') return;
@@ -327,13 +367,25 @@ function BorrowerView({ transaction }: { transaction: Transaction }) {
           );
       case 'HANDOVER_PENDING':
         return (
-          <CardContent className="p-6">
-             <Alert>
-                <AlertTitle>Action Required</AlertTitle>
-                <AlertDescription>
-                    Please go to your 'My Requests' page to enter the handover code and verify you have received the item.
-                </AlertDescription>
-            </Alert>
+          <CardContent className="space-y-2 p-6">
+            <p className="text-sm text-center text-muted-foreground">The lender has shared a code with you. Enter it here to confirm you have received the item.</p>
+            <Input
+              type="text"
+              placeholder="Enter 4-digit handover code"
+              value={verificationCode}
+              onChange={e => setVerificationCode(e.target.value)}
+              maxLength={4}
+              className="text-center"
+              disabled={isProcessing}
+            />
+            <Button
+              className="w-full"
+              onClick={verifyHandoverCode}
+              disabled={isProcessing || verificationCode.length !== 4}
+            >
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify Handover
+            </Button>
           </CardContent>
         );
       case 'ACTIVE':
