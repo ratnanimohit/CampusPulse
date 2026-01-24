@@ -43,46 +43,52 @@ export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Fetches all requests made by the user, sorted by creation date.
-  const requestsQuery = useMemoFirebase(
+  // 1. Fetch ALL item requests, ordered by date.
+  const allRequestsQuery = useMemoFirebase(
     () =>
-      user && firestore
-        ? query(collection(firestore, 'itemRequests'), where('requesterId', '==', user.uid), orderBy('createdAt', 'desc'))
+      firestore
+        ? query(collection(firestore, 'itemRequests'), orderBy('createdAt', 'desc'))
         : null,
-    [user, firestore]
+    [firestore]
   );
-  const { data: requests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
-  
+  const { data: allRequests, isLoading: isLoadingAllRequests } = useCollection<ItemRequest>(allRequestsQuery);
+
+  // 2. Filter on the client-side to get only the current user's requests.
+  const myRequests = useMemo(() => {
+      if (!allRequests || !user) return [];
+      return allRequests.filter(req => req.requesterId === user.uid);
+  }, [allRequests, user]);
+
   // Find transactions associated with the user's requests
-  const requestIds = useMemo(() => requests?.map(r => r.id) || [], [requests]);
+  const requestIds = useMemo(() => myRequests?.map(r => r.id) || [], [myRequests]);
 
   const transactionsQuery = useMemoFirebase(() => {
       if (!firestore || requestIds.length === 0) return null;
       // This query finds any transaction that was created from one of our requests.
       return query(
-        collection(firestore, 'transactions'), 
+        collection(firestore, 'transactions'),
         where('itemId', 'in', requestIds),
         where('status', '!=', 'CANCELLED')
       );
     }, [firestore, requestIds]
   );
-  
+
   const { data: associatedTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
-  
+
   // Combine request and transaction data to create a unified view.
   const displayRequests = useMemo(() => {
-    if (!requests) return [];
+    if (!myRequests) return [];
 
     const transactionMap = new Map(associatedTransactions?.map(t => [t.itemId, t]));
 
-    return requests.map(req => {
+    return myRequests.map(req => {
         const transaction = transactionMap.get(req.id);
         if (transaction) {
             // If a transaction exists, use its status
             return {
                 ...req,
                 transactionId: transaction.id,
-                status: transaction.status.replace(/_/g, ' ') 
+                status: transaction.status.replace(/_/g, ' ')
             };
         } else {
             // Otherwise, the request is still pending
@@ -92,7 +98,7 @@ export default function MyRequestsPage() {
             };
         }
     });
-  }, [requests, associatedTransactions]);
+  }, [myRequests, associatedTransactions]);
 
 
   const cancelRequest = async (requestId: string) => {
@@ -107,9 +113,9 @@ export default function MyRequestsPage() {
         await deleteDoc(transactionDoc.ref);
      }
   };
-  
-  const isLoading = isUserLoading || isLoadingRequests || (requestIds.length > 0 && isLoadingTransactions);
-  
+
+  const isLoading = isUserLoading || isLoadingAllRequests || (requestIds.length > 0 && isLoadingTransactions);
+
 
   return (
     <>
