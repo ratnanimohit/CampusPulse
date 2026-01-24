@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { simpleHash } from '@/lib/utils';
 
 type ItemRequest = {
   id: string;
@@ -63,6 +64,7 @@ type Transaction = {
         seconds: number;
         nanoseconds: number;
     } | any;
+    itemId?: string;
 };
 
 
@@ -88,7 +90,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // Fetch community requests
+  // 1. Fetch ALL item requests, which might include already fulfilled ones.
   const requestsQuery = useMemoFirebase(
     () => firestore ? query(
         collection(firestore, 'itemRequests'),
@@ -98,10 +100,33 @@ export default function Dashboard() {
   );
   const { data: allRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
+  // 2. Fetch all transactions that are currently active or completed to identify fulfilled requests.
+  const activeTransactionStates = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING', 'COMPLETED'];
+  const fulfilledTransactionsQuery = useMemoFirebase(
+    () => firestore ? query(
+        collection(firestore, 'transactions'),
+        where('status', 'in', activeTransactionStates)
+    ) : null,
+    [firestore]
+  );
+  const { data: fulfilledTransactions, isLoading: isLoadingFulfilled } = useCollection<{ itemId: string }>(fulfilledTransactionsQuery);
+  
+  // 3. Determine which requests to show in the community feed.
   const communityRequests = useMemo(() => {
-    if (!allRequests || !user) return [];
-    return allRequests.filter(req => req.requesterId !== user.uid);
-  }, [allRequests, user]);
+    if (!allRequests || !user || !fulfilledTransactions) return [];
+
+    // Create a set of request IDs that already have an associated transaction.
+    const fulfilledRequestIds = new Set(fulfilledTransactions.map(tx => tx.itemId));
+
+    // A community request is one that is NOT made by the current user and is NOT already fulfilled.
+    return allRequests.filter(req =>
+        req.requesterId !== user.uid && !fulfilledRequestIds.has(req.id)
+    );
+  }, [allRequests, user, fulfilledTransactions]);
+
+  // Loading state for the community requests card depends on both queries.
+  const isLoadingCommunityRequests = isLoadingRequests || isLoadingFulfilled;
+
 
   // Fetch user profile for karma points
    const userProfileRef = useMemoFirebase(
@@ -176,6 +201,8 @@ export default function Dashboard() {
 
     try {
       const transactionDocRef = doc(collection(firestore, 'transactions'));
+      
+      const handoverCode = Math.floor(1000 + Math.random() * 9000).toString();
 
       const transactionData = {
         id: transactionDocRef.id,
@@ -185,8 +212,8 @@ export default function Dashboard() {
         itemName: request.itemName,
         itemImageUrl: findImageUrl(request.itemName),
         karma: 10, // Example karma
-        status: 'CREATED',
-        handoverCodeHash: null,
+        status: 'HANDOVER_PENDING',
+        handoverCodeHash: simpleHash(handoverCode),
         handoverVerified: false,
         returnCodeHash: null,
         returnVerified: false,
@@ -420,7 +447,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingRequests ? (
+            {isLoadingCommunityRequests ? (
               <div className="flex items-center justify-center p-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
