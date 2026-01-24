@@ -156,12 +156,18 @@ function LenderView({ transaction }: { transaction: Transaction }) {
     try {
       const batch = writeBatch(firestore);
 
-      // 1. Update the transaction status
+      // 1. Update the transaction status to COMPLETED
       batch.update(transactionDocRef, {
         returnVerified: true,
         status: 'COMPLETED',
         updatedAt: serverTimestamp(),
       });
+
+      // 2. Delete the original item request now that the transaction is complete
+      if (transaction.itemId) {
+          const requestDocRef = doc(firestore, 'itemRequests', transaction.itemId);
+          batch.delete(requestDocRef);
+      }
 
       await batch.commit();
 

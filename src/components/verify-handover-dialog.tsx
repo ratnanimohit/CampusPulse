@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { simpleHash } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -76,11 +76,8 @@ export function VerifyHandoverDialog({ isOpen, onOpenChange, transaction }: Veri
         updatedAt: serverTimestamp(),
       });
       
-      // Delete the original item request now that it's fulfilled
-      if (transaction.itemId) {
-        const requestDocRef = doc(firestore, 'itemRequests', transaction.itemId);
-        await deleteDoc(requestDocRef);
-      }
+      // The original item request is now deleted when the transaction is 'COMPLETED',
+      // not here. This ensures it remains visible on the 'My Requests' page.
 
       toast({
         title: 'Handover Verified!',
