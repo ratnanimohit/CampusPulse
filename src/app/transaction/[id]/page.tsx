@@ -64,6 +64,50 @@ type UserProfile = {
   lastName: string;
 };
 
+
+const TransactionMap = ({ location }: { location: { lat: number; lng: number } }) => {
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+    libraries: ['places'],
+  });
+
+  const mapContainerStyle = {
+    width: '100%',
+    height: '100%',
+  };
+
+  const mapOptions = {
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false,
+    zoomControl: false,
+  };
+
+  if (loadError) {
+    return <MapLoadError loadError={loadError} />;
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="h-full flex items-center justify-center bg-muted">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <GoogleMap
+      mapContainerStyle={mapContainerStyle}
+      center={location}
+      zoom={15}
+      options={mapOptions}
+    >
+      <Marker position={location} />
+    </GoogleMap>
+  );
+};
+
+
 // --- RENDER COMPONENTS ---
 
 function LenderView({ transaction }: { transaction: Transaction }) {
@@ -332,10 +376,7 @@ export default function TransactionPage() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: ['places'],
-  });
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
@@ -477,19 +518,6 @@ export default function TransactionPage() {
       }
   }
 
-  const mapContainerStyle = {
-    width: '100%',
-    height: '100%',
-  };
-
-  const mapOptions = {
-    streetViewControl: false,
-    mapTypeControl: false,
-    fullscreenControl: false,
-    zoomControl: false,
-  };
-
-
   return (
     <div className="flex justify-center items-start pt-10">
         <Card className="w-full max-w-md overflow-hidden">
@@ -522,21 +550,12 @@ export default function TransactionPage() {
                             Meeting Location
                         </h3>
                         <div className="h-56 w-full rounded-lg overflow-hidden border">
-                            {loadError ? (
-                                <MapLoadError loadError={loadError} />
-                            ) : !isLoaded ? (
-                                <div className="h-full flex items-center justify-center bg-muted">
-                                    <Loader2 className="h-8 w-8 animate-spin" />
+                           {!hasApiKey ? (
+                                <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
+                                    <p className="text-sm text-muted-foreground">Google Maps API Key is not configured. Map functionality is disabled.</p>
                                 </div>
                             ) : transaction.location ? (
-                                <GoogleMap
-                                    mapContainerStyle={mapContainerStyle}
-                                    center={transaction.location}
-                                    zoom={15}
-                                    options={mapOptions}
-                                >
-                                    <Marker position={transaction.location} />
-                                </GoogleMap>
+                                <TransactionMap location={transaction.location} />
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
                                     <p className="text-sm text-muted-foreground">Location data not provided for this transaction.</p>

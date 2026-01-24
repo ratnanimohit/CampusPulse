@@ -37,12 +37,43 @@ const containerStyle = {
 
 const libraries: ('places')[] = ['places'];
 
-export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModalProps) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries,
-  });
+const MapModalMap = ({ location }: { location: { lat: number; lng: number } }) => {
+    const { isLoaded, loadError } = useJsApiLoader({
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+        libraries,
+    });
 
+    if (loadError) {
+        return <MapLoadError loadError={loadError} />;
+    }
+
+    if (!isLoaded) {
+        return (
+            <div className="h-full flex items-center justify-center bg-muted">
+                <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
+    return (
+        <GoogleMap
+            mapContainerStyle={containerStyle}
+            center={location}
+            zoom={12}
+            options={{
+                streetViewControl: false,
+                mapTypeControl: false,
+                fullscreenControl: false,
+            }}
+        >
+            <Marker position={location} />
+        </GoogleMap>
+    );
+};
+
+
+export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModalProps) {
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const hasLocation = !!request?.location;
 
   const handleConfirm = () => {
@@ -52,8 +83,12 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
   };
 
   const renderMapContent = () => {
-    if (loadError) {
-      return <MapLoadError loadError={loadError} />;
+    if (!hasApiKey) {
+        return (
+             <div className="h-full flex items-center justify-center bg-muted text-muted-foreground text-center p-4">
+               Google Maps API Key is not configured. Map functionality is disabled.
+            </div>
+        );
     }
     if (!hasLocation) {
         return (
@@ -62,27 +97,8 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
             </div>
         );
     }
-    if (!isLoaded) {
-        return (
-            <div className="h-full flex items-center justify-center bg-muted">
-                <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-    return (
-        <GoogleMap
-            mapContainerStyle={containerStyle}
-            center={request.location}
-            zoom={12}
-            options={{
-                streetViewControl: false,
-                mapTypeControl: false,
-                fullscreenControl: false,
-            }}
-        >
-            <Marker position={request.location!} />
-        </GoogleMap>
-    );
+    
+    return <MapModalMap location={request.location!} />;
   }
 
   return (
@@ -91,8 +107,10 @@ export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModal
         <DialogHeader>
           <DialogTitle>Borrower Location for "{request?.itemName}"</DialogTitle>
           <DialogDescription>
-            {loadError
-                ? "The map is unavailable, but you can still fulfill the request and coordinate via chat."
+            {!hasApiKey
+                ? "The map is unavailable because the Google Maps API key is not configured, but you can still fulfill the request and coordinate via chat."
+                : !hasLocation 
+                ? "The map is unavailable because location data was not provided for this request. You can still fulfill the request and coordinate via chat."
                 : "This map shows the approximate location of the user who requested the item."
             }
           </DialogDescription>
