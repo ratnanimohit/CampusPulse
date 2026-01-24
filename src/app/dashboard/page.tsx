@@ -73,7 +73,10 @@ const findImageUrl = (itemName: string): string => {
   if (foundImage) {
     return foundImage.imageUrl;
   }
-  return `https://picsum.photos/seed/${itemName.replace(/\s/g, '')}/320/180`;
+  // Fallback to a generic item image
+  const genericImage = PlaceHolderImages.find(img => img.id === 'item');
+  // If even the generic image is not found, fallback to the old picsum url
+  return genericImage?.imageUrl ?? `https://picsum.photos/seed/${itemName.replace(/\s/g, '')}/320/180`;
 };
 
 
