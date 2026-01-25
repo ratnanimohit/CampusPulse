@@ -73,7 +73,7 @@ const MapModalMap = ({ location }: { location: { lat: number; lng: number } }) =
 
 
 export function MapModal({ request, onClose, onConfirm, isFulfilling }: MapModalProps) {
-  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
   const hasLocation = !!request?.location;
 
   const handleConfirm = () => {
