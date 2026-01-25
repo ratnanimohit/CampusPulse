@@ -456,7 +456,7 @@ export default function TransactionPage() {
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
+  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'AIzaSyAWFXHOlTS-kfUxNmZ9qFySKcffO87-x50';
 
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
@@ -604,6 +604,7 @@ export default function TransactionPage() {
   const noLocationMessage = isFulfiller 
       ? "Location data not provided by borrower."
       : "Location data not provided by lender.";
+  const shouldShowMap = transaction.status === 'HANDOVER_PENDING' || transaction.status === 'RETURN_PENDING';
 
   return (
     <div className="flex justify-center items-start pt-10">
@@ -647,25 +648,27 @@ export default function TransactionPage() {
                       />
                     )}
 
-                    <CardContent className="pb-4">
-                        <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            {meetingLocationTitle}
-                        </h3>
-                        <div className="h-56 w-full rounded-lg overflow-hidden border">
-                           {!hasApiKey ? (
-                                <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
-                                    <p className="text-sm text-muted-foreground">Google Maps API Key is not configured. Map functionality is disabled.</p>
-                                </div>
-                            ) : locationToShow ? (
-                                <TransactionMap location={locationToShow} />
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
-                                    <p className="text-sm text-muted-foreground">{noLocationMessage}</p>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
+                    {shouldShowMap && (
+                      <CardContent className="pb-4">
+                          <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="h-4 w-4" />
+                              {meetingLocationTitle}
+                          </h3>
+                          <div className="h-56 w-full rounded-lg overflow-hidden border">
+                            {!hasApiKey ? (
+                                  <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
+                                      <p className="text-sm text-muted-foreground">Google Maps API Key is not configured. Map functionality is disabled.</p>
+                                  </div>
+                              ) : locationToShow ? (
+                                  <TransactionMap location={locationToShow} />
+                              ) : (
+                                  <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
+                                      <p className="text-sm text-muted-foreground">{noLocationMessage}</p>
+                                  </div>
+                              )}
+                          </div>
+                      </CardContent>
+                    )}
 
                 </TabsContent>
                 <TabsContent value="chat" className="m-0">
