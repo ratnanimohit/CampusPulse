@@ -35,7 +35,6 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
-import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 
 type ItemRequest = {
   id: string;
@@ -210,13 +209,6 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
-      const imageResult = await generateImageFromPrompt({ prompt: request.itemName });
-      const itemImageUrl = imageResult.imageUrl;
-      
-      if (!itemImageUrl) {
-        throw new Error('Failed to generate item image.');
-      }
-      
       const fulfillerLocation = await getCurrentLocation();
       const batch = writeBatch(firestore);
 
@@ -229,7 +221,6 @@ export default function Dashboard() {
         requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
-        itemImageUrl: itemImageUrl,
         karma: 10, // Base karma is 10 for all transactions
         status: 'HANDOVER_PENDING',
         handoverCode: handoverCode,

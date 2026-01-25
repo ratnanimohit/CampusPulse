@@ -45,7 +45,7 @@ export type Transaction = {
   requesterId: string;
   itemId: string;
   itemName: string;
-  itemImageUrl: string;
+  itemImageUrl?: string;
   karma: number;
   status:
     | 'CREATED'
@@ -638,9 +638,6 @@ export default function TransactionPage() {
                 </TabsList>
                 <TabsContent value="details">
                     <CardHeader>
-                        <div className="relative w-full h-48 rounded-lg overflow-hidden mb-4">
-                            <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item"/>
-                        </div>
                         <CardTitle className="font-headline text-2xl">{transaction.itemName}</CardTitle>
                         <div className="flex justify-between items-center text-sm">
                             <Badge variant={getStatusBadgeVariant()}>{transaction.status.replace(/_/g, ' ')}</Badge>

@@ -18,7 +18,7 @@ export type Transaction = {
   requesterId: string;
   itemId: string;
   itemName:string;
-  itemImageUrl: string;
+  itemImageUrl?: string;
   karma: number;
   status:
     | 'CREATED'
@@ -56,9 +56,6 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
   return (
     <Card className="flex flex-col h-full w-full transition-all hover:shadow-md">
       <CardHeader>
-        <div className="relative w-full h-40 rounded-lg overflow-hidden mb-2">
-           <Image src={transaction.itemImageUrl} alt={transaction.itemName} layout="fill" objectFit="cover" data-ai-hint="item"/>
-        </div>
         <CardTitle className="font-headline text-xl">{transaction.itemName}</CardTitle>
         <div className="flex justify-between items-center">
             <Badge variant={getStatusBadgeVariant()}>{transaction.status.replace(/_/g, ' ')}</Badge>
