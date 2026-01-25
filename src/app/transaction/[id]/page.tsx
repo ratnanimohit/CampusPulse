@@ -34,6 +34,7 @@ import { MapLoadError } from '@/components/map-load-error';
 import { FeedbackForm } from '@/components/feedback-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatInterface } from "@/components/chat-interface";
+import { PeerProfileHeader } from '@/components/peer-profile-header';
 
 
 export type Transaction = {
@@ -521,6 +522,8 @@ export default function TransactionPage() {
   const isFulfiller = user?.uid === transaction.fulfillerId;
   const isRequester = user?.uid === transaction.requesterId;
   const userRole = isFulfiller ? 'Lender' : isRequester ? 'Borrower' : 'Observer';
+  const peerId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
+  const peerRole = isFulfiller ? 'Borrower' : 'Lender';
 
   if (transaction.status === 'COMPLETED' || transaction.status === 'CANCELLED') {
       const hasGivenFeedback = userFeedback && userFeedback.length > 0;
@@ -598,11 +601,27 @@ export default function TransactionPage() {
                                 <span className="font-bold text-primary">{transaction.karma}</span> Karma
                             </div>
                         </div>
-                        <CardDescription>
-                            You are the <span className="font-semibold">{userRole}</span>.
-                        </CardDescription>
                     </CardHeader>
+
+                    <div className="px-6 pb-2">
+                        <PeerProfileHeader peerId={peerId} role={peerRole} />
+                    </div>
                     
+                    {isFulfiller && (
+                      <LenderView
+                        transaction={transaction}
+                        isProcessing={isProcessing}
+                        setIsProcessing={setIsProcessing}
+                      />
+                    )}
+                    {isRequester && (
+                      <BorrowerView
+                        transaction={transaction}
+                        isProcessing={isProcessing}
+                        setIsProcessing={setIsProcessing}
+                      />
+                    )}
+
                     <CardContent className="pb-4">
                         <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
                             <MapPin className="h-4 w-4" />
@@ -623,20 +642,6 @@ export default function TransactionPage() {
                         </div>
                     </CardContent>
 
-                    {isFulfiller && (
-                      <LenderView
-                        transaction={transaction}
-                        isProcessing={isProcessing}
-                        setIsProcessing={setIsProcessing}
-                      />
-                    )}
-                    {isRequester && (
-                      <BorrowerView
-                        transaction={transaction}
-                        isProcessing={isProcessing}
-                        setIsProcessing={setIsProcessing}
-                      />
-                    )}
                 </TabsContent>
                 <TabsContent value="chat" className="m-0">
                     <div className="h-[calc(80vh-100px)] md:h-[700px] border-t">
