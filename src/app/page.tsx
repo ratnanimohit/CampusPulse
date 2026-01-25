@@ -27,6 +27,7 @@ import { useAuth, useUser, useFirestore } from '@/firebase';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  sendEmailVerification,
 } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -80,7 +81,8 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      ...(formType === 'signup' && { firstName: '', lastName: '' }),
+      formType: formType,
+      ...(formType === 'signup' ? { firstName: '', lastName: '' } : {  firstName: undefined, lastName: undefined }),
     },
   });
 
@@ -89,20 +91,21 @@ export default function LoginPage() {
     form.reset({
       email: '',
       password: '',
-      ...(formType === 'signup' && { firstName: '', lastName: '' }),
+      formType: formType,
+      ...(formType === 'signup' ? { firstName: '', lastName: '' } : { firstName: undefined, lastName: undefined }),
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formType]);
 
 
   useEffect(() => {
-    if (user) {
+    if (user && user.emailVerified) {
       router.replace('/dashboard');
     }
   }, [user, router]);
 
 
-  if (isUserLoading || user) {
+  if (isUserLoading || (user && user.emailVerified)) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin" />
@@ -117,12 +120,13 @@ export default function LoginPage() {
     switch (error.code) {
       case 'auth/user-not-found':
       case 'auth/wrong-password':
+      case 'auth/invalid-credential':
         title = 'Login Failed';
         description = 'Invalid email or password. Please try again.';
         break;
       case 'auth/email-already-in-use':
         title = 'Sign-up Failed';
-        description = 'An account with this email already exists. Please log in.';
+        description = 'An account with this email already exists. Please log in or verify your email.';
         break;
       case 'auth/invalid-email':
          title = 'Invalid Email';
@@ -146,15 +150,22 @@ export default function LoginPage() {
   const onSubmit = async (data: FormValues) => {
     setIsSubmitting(true);
     try {
-      if (formType === 'login') {
-        await signInWithEmailAndPassword(auth, data.email, data.password);
+      if (data.formType === 'login') {
+        const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+        
+        if (!userCredential.user.emailVerified) {
+          // Firebase automatically signs the user in, so we sign them out
+          // and throw an error to show the verification message.
+          await auth.signOut();
+          throw new Error('EMAIL_NOT_VERIFIED');
+        }
+
         toast({
           title: 'Login Successful!',
           description: "Welcome back to CampusPulse!",
         });
         router.push('/dashboard');
-      } else {
-        // We can be sure it's signup data because of the check
+      } else if (data.formType === 'signup') {
         const signupData = data as z.infer<typeof signupSchema>;
         const userCredential = await createUserWithEmailAndPassword(
           auth,
@@ -163,7 +174,7 @@ export default function LoginPage() {
         );
         const newUser = userCredential.user;
         
-        // Create user profile in Firestore
+        // Create user profile in Firestore first
         await setDoc(doc(firestore, 'userProfiles', newUser.uid), {
           id: newUser.uid,
           email: newUser.email,
@@ -175,15 +186,31 @@ export default function LoginPage() {
           ratingsCount: 0,
         });
 
+        // Then send verification email
+        await sendEmailVerification(newUser);
+        
+        // And sign the user out so they have to log in after verifying
+        await auth.signOut();
+
         toast({
-          title: 'Account Created!',
-          description: 'Welcome to CampusPulse! You can now log in.',
+          title: 'Verification Email Sent!',
+          description: 'Please check your inbox and click the link to verify your account. Then you can log in.',
+          duration: 10000,
         });
+
         setFormType('login'); // Switch to login view after successful signup
         form.reset();
       }
     } catch (error) {
-        if (error instanceof FirebaseError) {
+        if (error instanceof Error && error.message === 'EMAIL_NOT_VERIFIED') {
+             toast({
+                variant: 'destructive',
+                title: 'Email Not Verified',
+                description: 'Please check your inbox for the verification link before logging in.',
+                duration: 8000,
+            });
+        }
+        else if (error instanceof FirebaseError) {
             handleAuthError(error);
         } else {
             toast({
@@ -191,6 +218,7 @@ export default function LoginPage() {
                 title: 'An unexpected error occurred.',
                 description: 'Please try again later.',
             });
+            console.error(error);
         }
     } finally {
       setIsSubmitting(false);
@@ -266,6 +294,7 @@ export default function LoginPage() {
                         placeholder="your.name@gla.ac.in"
                         {...field}
                         disabled={isSubmitting}
+                        value={field.value || ''}
                       />
                     </FormControl>
                     <FormMessage />
@@ -286,6 +315,7 @@ export default function LoginPage() {
                           {...field}
                           disabled={isSubmitting}
                           className="pr-10"
+                          value={field.value || ''}
                         />
                       </FormControl>
                       <button

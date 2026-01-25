@@ -13,12 +13,15 @@ export function AppContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isUserLoading && !user && pathname !== '/') {
+    // Redirect only if loading is complete and there's no verified user.
+    if (!isUserLoading && (!user || !user.emailVerified) && pathname !== '/') {
       router.replace('/');
     }
   }, [isUserLoading, user, pathname, router]);
 
-  if (isUserLoading || (!user && pathname !== '/')) {
+  const isLoading = isUserLoading || (!user && pathname !== '/');
+  
+  if (isLoading) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin" />
@@ -31,7 +34,7 @@ export function AppContent({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-
+  // If we reach here, user is loaded, verified, and not on the login page.
   return (
     <div className="flex min-h-screen w-full">
       <Sidebar />
