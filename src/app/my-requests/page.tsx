@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc, orderBy } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
 
 export type ItemRequest = {
@@ -29,26 +29,21 @@ export type ItemRequest = {
   requiredBy: string;
   requesterId: string;
   createdAt?: any;
-};
-
-// Simplified transaction type for this page's purpose
-export type Transaction = {
-  id: string;
-  itemId: string; // This is the ItemRequest ID
-  status: string;
+  status: 'PENDING' | 'FULFILLED';
 };
 
 export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // 1. Fetch only the current user's item requests, ordered by date.
+  // Fetch only the current user's item requests that are still PENDING.
   const myRequestsQuery = useMemoFirebase(
     () =>
       user && firestore
         ? query(
             collection(firestore, 'itemRequests'),
             where('requesterId', '==', user.uid),
+            where('status', '==', 'PENDING'),
             orderBy('createdAt', 'desc')
           )
         : null,
@@ -56,60 +51,24 @@ export default function MyRequestsPage() {
   );
   const { data: myRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(myRequestsQuery);
 
-  // 2. Fetch all transactions where the current user is the requester.
-  const transactionsQuery = useMemoFirebase(() => {
-      if (!user || !firestore) return null;
-      return query(
-        collection(firestore, 'transactions'),
-        where('requesterId', '==', user.uid)
-      );
-    }, [user, firestore]
-  );
-  const { data: associatedTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
-  
-  // 3. On the client, determine which requests are fulfilled and should not be displayed.
-  const displayRequests = useMemo(() => {
-    // Only filter when both data sources are loaded.
-    // The `isLoading` flag below will handle showing the spinner in the meantime.
-    if (!myRequests || !associatedTransactions) {
-      return [];
-    }
-
-    // A request is considered "fulfilled" if a transaction for it exists and is NOT cancelled.
-    const fulfilledRequestIds = new Set(
-        associatedTransactions
-            .filter(t => t.status !== 'CANCELLED')
-            .map(t => t.itemId)
-    );
-    
-    return myRequests.filter(req => !fulfilledRequestIds.has(req.id));
-    
-  }, [myRequests, associatedTransactions]);
-
-
   const cancelRequest = async (requestId: string) => {
     if (!firestore) return;
+    // A cancelled request is simply deleted. If a transaction was created,
+    // cancelling it from the transaction screen will re-open this request.
     const requestDocRef = doc(firestore, 'itemRequests', requestId);
     await deleteDoc(requestDocRef);
-
-    // Also cancel any associated transaction that might have been created
-     const transactionSnapshot = await getDocs(query(collection(firestore, 'transactions'), where('itemId', '==', requestId)));
-     if (!transactionSnapshot.empty) {
-        const transactionDoc = transactionSnapshot.docs[0];
-        await deleteDoc(transactionDoc.ref);
-     }
   };
 
-  const isLoading = isUserLoading || isLoadingMyRequests || isLoadingTransactions;
+  const isLoading = isUserLoading || isLoadingMyRequests;
 
 
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
+          <CardTitle className="font-headline text-2xl">My Pending Requests</CardTitle>
           <CardDescription>
-            An overview of your item requests that are waiting for a lender. Once fulfilled, they will appear in Active Transactions.
+            This list shows your requests that are waiting for a lender. Once fulfilled, they will move to your Active Transactions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -117,7 +76,7 @@ export default function MyRequestsPage() {
             <div className="flex justify-center items-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : displayRequests && displayRequests.length > 0 ? (
+          ) : myRequests && myRequests.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -128,7 +87,7 @@ export default function MyRequestsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayRequests.map(req => (
+                {myRequests.map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{req.itemName}</TableCell>
                       <TableCell>
@@ -147,7 +106,7 @@ export default function MyRequestsPage() {
                       </TableCell>
                        <TableCell>
                         <Badge variant="outline">
-                            Pending
+                            {req.status}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right space-x-2">
@@ -171,7 +130,7 @@ export default function MyRequestsPage() {
                 You have no pending requests
               </h3>
               <p className="text-sm text-muted-foreground">
-                Create a new request to see it here. Once fulfilled, it will move to Active Transactions.
+                Create a new request to see it here.
               </p>
             </div>
           )}

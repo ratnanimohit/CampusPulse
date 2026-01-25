@@ -172,7 +172,16 @@ function LenderView({
   const handleCancel = async () => {
     setIsProcessing(true);
     try {
-        await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+        const batch = writeBatch(firestore);
+        
+        // 1. Update transaction status
+        batch.update(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+        
+        // 2. Re-open the original item request
+        const requestDocRef = doc(firestore, 'itemRequests', transaction.itemId);
+        batch.update(requestDocRef, { status: 'PENDING' });
+
+        await batch.commit();
         toast({ title: 'Transaction Cancelled' });
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -330,7 +339,16 @@ function BorrowerView({
   const handleCancel = async () => {
     setIsProcessing(true);
     try {
-        await updateDoc(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+        const batch = writeBatch(firestore);
+        
+        // 1. Update transaction status
+        batch.update(transactionDocRef, { status: 'CANCELLED', updatedAt: serverTimestamp() });
+        
+        // 2. Re-open the original item request
+        const requestDocRef = doc(firestore, 'itemRequests', transaction.itemId);
+        batch.update(requestDocRef, { status: 'PENDING' });
+        
+        await batch.commit();
         toast({ title: 'Transaction Cancelled' });
     } catch (error: any) {
         toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -551,7 +569,7 @@ export default function TransactionPage() {
                        )
                     )}
                      {transaction.status === 'CANCELLED' && (
-                        <p className="text-center text-muted-foreground">This transaction was cancelled.</p>
+                        <p className="text-center text-muted-foreground">This transaction was cancelled and the original request is now open again.</p>
                      )}
                 </CardContent>
                 <CardFooter>

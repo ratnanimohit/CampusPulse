@@ -98,6 +98,7 @@ export default function RequestsPage() {
         ...data,
         id: newRequestRef.id,
         requesterId: user.uid,
+        status: 'PENDING', // Set initial status
         createdAt: serverTimestamp(),
         ...(location && { location })
     };

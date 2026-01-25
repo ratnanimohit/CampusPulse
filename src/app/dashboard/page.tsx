@@ -26,11 +26,11 @@ import {
   collection,
   query,
   where,
-  setDoc,
-  doc,
   serverTimestamp,
   or,
   orderBy,
+  writeBatch,
+  doc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
@@ -47,6 +47,7 @@ type ItemRequest = {
     lng: number;
   };
   createdAt?: any;
+  status: 'PENDING' | 'FULFILLED';
 };
 
 type UserProfile = {
@@ -90,43 +91,22 @@ export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
 
-  // 1. Fetch ALL item requests, which might include already fulfilled ones.
+  // 1. Fetch ALL PENDING item requests.
   const requestsQuery = useMemoFirebase(
     () => firestore ? query(
         collection(firestore, 'itemRequests'),
+        where('status', '==', 'PENDING'),
         orderBy('createdAt', 'desc')
     ) : null,
     [firestore]
   );
-  const { data: allRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+  const { data: allPendingRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
-  // 2. Fetch all transactions that are currently active or completed to identify fulfilled requests.
-  const activeTransactionStates = ['CREATED', 'HANDOVER_PENDING', 'ACTIVE', 'RETURN_PENDING', 'COMPLETED'];
-  const fulfilledTransactionsQuery = useMemoFirebase(
-    () => firestore ? query(
-        collection(firestore, 'transactions'),
-        where('status', 'in', activeTransactionStates)
-    ) : null,
-    [firestore]
-  );
-  const { data: fulfilledTransactions, isLoading: isLoadingFulfilled } = useCollection<{ itemId: string }>(fulfilledTransactionsQuery);
-  
-  // 3. Determine which requests to show in the community feed.
+  // 2. Filter for community requests (not made by the current user).
   const communityRequests = useMemo(() => {
-    if (!allRequests || !user || !fulfilledTransactions) return [];
-
-    // Create a set of request IDs that already have an associated transaction.
-    const fulfilledRequestIds = new Set(fulfilledTransactions.map(tx => tx.itemId));
-
-    // A community request is one that is NOT made by the current user and is NOT already fulfilled.
-    return allRequests.filter(req =>
-        req.requesterId !== user.uid && !fulfilledRequestIds.has(req.id)
-    );
-  }, [allRequests, user, fulfilledTransactions]);
-
-  // Loading state for the community requests card depends on both queries.
-  const isLoadingCommunityRequests = isLoadingRequests || isLoadingFulfilled;
-
+    if (!allPendingRequests || !user) return [];
+    return allPendingRequests.filter(req => req.requesterId !== user.uid);
+  }, [allPendingRequests, user]);
 
   // Fetch user profile for karma points
    const userProfileRef = useMemoFirebase(
@@ -200,10 +180,11 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
-      const transactionDocRef = doc(collection(firestore, 'transactions'));
-      
-      const handoverCode = Math.floor(1000 + Math.random() * 9000).toString();
+      const batch = writeBatch(firestore);
 
+      // 1. Create the transaction document
+      const transactionDocRef = doc(collection(firestore, 'transactions'));
+      const handoverCode = Math.floor(1000 + Math.random() * 9000).toString();
       const transactionData = {
         id: transactionDocRef.id,
         fulfillerId: user.uid,
@@ -223,8 +204,13 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
         ...(request.location && { location: request.location }),
       };
+      batch.set(transactionDocRef, transactionData);
+
+      // 2. Update the original item request's status to FULFILLED
+      const requestDocRef = doc(firestore, 'itemRequests', request.id);
+      batch.update(requestDocRef, { status: 'FULFILLED' });
       
-      await setDoc(transactionDocRef, transactionData);
+      await batch.commit();
   
       toast({
         title: 'Request Accepted!',
@@ -449,7 +435,7 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoadingCommunityRequests ? (
+            {isLoadingRequests ? (
               <div className="flex items-center justify-center p-10">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>

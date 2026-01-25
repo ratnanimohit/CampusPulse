@@ -227,6 +227,14 @@
           "description": "The date and time the item is expected to be available.",
           "format": "date-time"
         },
+        "status": {
+          "type": "string",
+          "description": "The status of the request.",
+          "enum": [
+            "PENDING",
+            "FULFILLED"
+          ]
+        },
         "location": {
           "type": "object",
           "description": "The geographical coordinates where the item is requested.",
@@ -252,6 +260,7 @@
         "reason",
         "urgency",
         "requiredBy",
+        "status",
         "createdAt"
       ]
     },
