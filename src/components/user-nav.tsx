@@ -69,7 +69,7 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild disabled={navigationLocked}>
-            <Link href="/profile">
+            <Link href={`/profile/${user.uid}`}>
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </Link>
@@ -90,5 +90,3 @@ export function UserNav() {
     </DropdownMenu>
   );
 }
-
-    

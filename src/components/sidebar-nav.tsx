@@ -16,7 +16,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
-import { useAuth } from '@/firebase';
+import { useAuth, useUser } from '@/firebase';
 import { useAtom } from 'jotai';
 import { navigationLockedAtom } from '@/lib/state/app-state';
 import { useToast } from '@/hooks/use-toast';
@@ -29,6 +29,7 @@ interface SidebarNavProps extends ComponentProps<'nav'> {
 export function SidebarNav({ className, isMobile = false, ...props }: SidebarNavProps) {
   const pathname = usePathname();
   const auth = useAuth();
+  const { user } = useUser();
   const [navigationLocked] = useAtom(navigationLockedAtom);
   const { toast } = useToast();
 
@@ -62,12 +63,16 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
     { href: '/transactions', icon: Repeat, label: 'Active Transactions' },
     { href: '/history', icon: History, label: 'History' },
-    { href: '/profile', icon: Users, label: 'Profile' },
+    { href: user ? `/profile/${user.uid}` : '/profile', icon: Users, label: 'Profile' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ];
 
   const isActive = (href: string) => {
-    return pathname.startsWith(href);
+    // For dynamic profile route, check if the path starts with /profile/
+    if (href.includes('/profile/')) {
+        return pathname.startsWith('/profile/');
+    }
+    return pathname === href;
   }
 
   const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void }) => (
@@ -102,7 +107,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
         )}
         {...props}
       >
-        {navLinks.map(link => <NavLink key={link.href} {...link} />)}
+        {navLinks.map(link => (user || (!link.href.includes('/profile') && !link.href.includes('/settings'))) && <NavLink key={link.href} {...link} />)}
         <button
           onClick={handleSignOutClick}
           disabled={navigationLocked}
