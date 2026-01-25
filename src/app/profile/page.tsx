@@ -85,12 +85,22 @@ export default function ProfilePage() {
     const feedbackQuery = useMemoFirebase(
         () => user && firestore ? query(
             collection(firestore, 'feedback'),
-            where('ratedUserId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('ratedUserId', '==', user.uid)
+            // No longer ordering by 'createdAt' here to avoid needing a composite index
         ) : null,
         [user, firestore]
     );
-    const { data: feedbacks, isLoading: isLoadingFeedbacks } = useCollection<Feedback>(feedbackQuery);
+    const { data: unsortedFeedbacks, isLoading: isLoadingFeedbacks } = useCollection<Feedback>(feedbackQuery);
+
+    const feedbacks = useMemo(() => {
+        if (!unsortedFeedbacks) return [];
+        // Sort on the client side
+        return [...unsortedFeedbacks].sort((a, b) => {
+            const timeA = a.createdAt?.seconds ?? 0;
+            const timeB = b.createdAt?.seconds ?? 0;
+            return timeB - timeA;
+        });
+    }, [unsortedFeedbacks]);
 
 
     const stats = useMemo(() => {
