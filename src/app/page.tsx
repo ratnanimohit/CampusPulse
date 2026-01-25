@@ -226,6 +226,7 @@ export default function LoginPage() {
                             <Input
                               placeholder="First Name"
                               {...field}
+                              value={field.value || ''}
                               disabled={isSubmitting}
                             />
                           </FormControl>
@@ -243,6 +244,7 @@ export default function LoginPage() {
                             <Input
                               placeholder="Last Name"
                               {...field}
+                              value={field.value || ''}
                               disabled={isSubmitting}
                             />
                           </FormControl>
