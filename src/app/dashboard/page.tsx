@@ -52,6 +52,8 @@ type ItemRequest = {
 
 type UserProfile = {
     karmaPoints: number;
+    firstName?: string;
+    lastName?: string;
 };
 
 type Transaction = {
@@ -95,7 +97,6 @@ const findImageUrl = (itemName: string): string => {
 export default function Dashboard() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const [userName, setUserName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
   const [nearbyEmergencyRequests, setNearbyEmergencyRequests] = useState<ItemRequest[]>([]);
@@ -145,6 +146,13 @@ export default function Dashboard() {
     [user, firestore]
   );
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const displayName = useMemo(() => {
+    if (userProfile?.firstName) {
+        return userProfile.firstName;
+    }
+    return user?.displayName || user?.email?.split('@')[0] || 'Student';
+  }, [userProfile, user]);
 
   // Fetch ALL transactions for the user to calculate stats accurately
    const allTransactionsQuery = useMemoFirebase(() => {
@@ -217,24 +225,6 @@ export default function Dashboard() {
 
     checkNearby();
   }, [allEmergencyRequests, user]);
-
-  useEffect(() => {
-    if (isClient) {
-      const savedSettings = localStorage.getItem('userSettings');
-      const defaultName = user?.displayName || user?.email?.split('@')[0] || 'Student';
-
-      if (savedSettings) {
-        try {
-          const { name } = JSON.parse(savedSettings);
-          setUserName(name || defaultName);
-        } catch (e) {
-          setUserName(defaultName);
-        }
-      } else {
-        setUserName(defaultName);
-      }
-    }
-  }, [user, isClient]);
 
   const fulfillRequest = async (request: ItemRequest) => {
     if (!firestore || !user) return;
@@ -322,7 +312,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline">
-            Welcome back, {userName}!
+            Welcome back, {displayName}!
           </h1>
           <p className="text-muted-foreground">
             Here's what's happening on campus today.
