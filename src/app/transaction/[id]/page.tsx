@@ -587,7 +587,9 @@ export default function TransactionPage() {
                      )}
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+                    {(transaction.status === 'CANCELLED' || (transaction.status === 'COMPLETED' && hasGivenFeedback)) && (
+                        <Button className="w-full" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
+                    )}
                 </CardFooter>
             </Card>
         </div>
