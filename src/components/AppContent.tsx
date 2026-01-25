@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useUser } from '@/firebase';
 import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
@@ -11,21 +12,17 @@ export function AppContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!isUserLoading && !user && pathname !== '/') {
+      router.replace('/');
+    }
+  }, [isUserLoading, user, pathname, router]);
+
+  if (isUserLoading || (!user && pathname !== '/')) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
             <Loader2 className="h-16 w-16 animate-spin" />
         </div>
-    )
-  }
-
-  // If there's no user and we're not on the login page, redirect
-  if (!user && pathname !== '/') {
-    router.replace('/');
-    return (
-       <div className="flex min-h-screen w-full items-center justify-center">
-          <Loader2 className="h-16 w-16 animate-spin" />
-       </div>
     );
   }
   
