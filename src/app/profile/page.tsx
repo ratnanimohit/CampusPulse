@@ -94,12 +94,12 @@ export default function ProfilePage() {
 
     const feedbacks = useMemo(() => {
         if (!unsortedFeedbacks) return [];
-        // Sort on the client side
+        // Sort on the client side and take the last 5
         return [...unsortedFeedbacks].sort((a, b) => {
             const timeA = a.createdAt?.seconds ?? 0;
             const timeB = b.createdAt?.seconds ?? 0;
             return timeB - timeA;
-        });
+        }).slice(0, 5);
     }, [unsortedFeedbacks]);
 
 
