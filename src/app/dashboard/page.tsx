@@ -73,14 +73,22 @@ type Transaction = {
 
 const findImageUrl = (itemName: string): string => {
   const lowerItemName = itemName.toLowerCase();
-  const foundImage = PlaceHolderImages.find(img => lowerItemName.includes(img.id));
+
+  // Sort by id length descending to match more specific keywords first (e.g. "lab coat" before "coat")
+  const sortedPlaceholders = [...PlaceHolderImages].sort((a, b) => b.id.length - a.id.length);
+
+  // Check if item name contains a keyword
+  const foundImage = sortedPlaceholders.find(img => lowerItemName.includes(img.id));
+
   if (foundImage) {
     return foundImage.imageUrl;
   }
+  
   // Fallback to a generic item image
   const genericImage = PlaceHolderImages.find(img => img.id === 'item');
-  // If even the generic image is not found, fallback to the old picsum url
-  return genericImage?.imageUrl ?? `https://picsum.photos/seed/${itemName.replace(/\s/g, '')}/320/180`;
+  
+  // Fallback to picsum, using a more robust encoding for the URL seed
+  return genericImage?.imageUrl ?? `https://picsum.photos/seed/${encodeURIComponent(lowerItemName)}/320/180`;
 };
 
 
