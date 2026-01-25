@@ -511,6 +511,7 @@ export default function TransactionPage() {
   const isLoading = isUserLoading || isTransactionLoading || isLoadingLender || isLoadingRequester;
 
   const isFulfiller = user?.uid === transaction?.fulfillerId;
+  const isRequester = user?.uid === transaction?.requesterId;
   const hasGivenFeedback = isFulfiller ? transaction?.lenderGaveFeedback : transaction?.requesterGaveFeedback;
   const isFeedbackRequired = transaction?.status === 'COMPLETED' && !hasGivenFeedback;
 
