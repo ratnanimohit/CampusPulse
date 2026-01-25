@@ -21,7 +21,6 @@ import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, getDocs, orderBy } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 
 export type ItemRequest = {
   id: string;
@@ -43,45 +42,45 @@ export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // 1. Fetch ALL item requests, ordered by date.
-  const allRequestsQuery = useMemoFirebase(
+  // 1. Fetch only the current user's item requests, ordered by date.
+  const myRequestsQuery = useMemoFirebase(
     () =>
-      firestore
-        ? query(collection(firestore, 'itemRequests'), orderBy('createdAt', 'desc'))
+      user && firestore
+        ? query(
+            collection(firestore, 'itemRequests'),
+            where('requesterId', '==', user.uid),
+            orderBy('createdAt', 'desc')
+          )
         : null,
-    [firestore]
+    [user, firestore]
   );
-  const { data: allRequests, isLoading: isLoadingAllRequests } = useCollection<ItemRequest>(allRequestsQuery);
+  const { data: myRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(myRequestsQuery);
 
-  // 2. Filter on the client-side to get only the current user's requests.
-  const myRequests = useMemo(() => {
-      if (!allRequests || !user) return [];
-      return allRequests.filter(req => req.requesterId === user.uid);
-  }, [allRequests, user]);
-
-  // Find transactions associated with the user's requests
-  const requestIds = useMemo(() => myRequests?.map(r => r.id) || [], [myRequests]);
-
+  // 2. Fetch all transactions where the current user is the requester.
   const transactionsQuery = useMemoFirebase(() => {
-      if (!firestore || requestIds.length === 0) return null;
-      // This query finds any transaction that was created from one of our requests.
+      if (!user || !firestore) return null;
       return query(
         collection(firestore, 'transactions'),
-        where('itemId', 'in', requestIds),
-        where('status', '!=', 'CANCELLED')
+        where('requesterId', '==', user.uid)
       );
-    }, [firestore, requestIds]
+    }, [user, firestore]
   );
-
   const { data: associatedTransactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
-
-  // Only show requests that have NOT been fulfilled.
+  
+  // 3. On the client, determine which requests are fulfilled and should not be displayed.
   const displayRequests = useMemo(() => {
     if (!myRequests) return [];
+    // If transactions haven't loaded yet, show all requests briefly to avoid layout shift, 
+    // they will be filtered out once transactions load.
+    if (!associatedTransactions) return myRequests;
 
-    const fulfilledRequestIds = new Set(associatedTransactions?.map(t => t.itemId));
-
-    // Only include requests that have not been fulfilled yet.
+    // A request is considered "fulfilled" if a transaction for it exists and is NOT cancelled.
+    const fulfilledRequestIds = new Set(
+        associatedTransactions
+            .filter(t => t.status !== 'CANCELLED')
+            .map(t => t.itemId)
+    );
+    
     return myRequests.filter(req => !fulfilledRequestIds.has(req.id));
     
   }, [myRequests, associatedTransactions]);
@@ -100,7 +99,7 @@ export default function MyRequestsPage() {
      }
   };
 
-  const isLoading = isUserLoading || isLoadingAllRequests || (requestIds.length > 0 && isLoadingTransactions);
+  const isLoading = isUserLoading || isLoadingMyRequests || isLoadingTransactions;
 
 
   return (
@@ -109,7 +108,7 @@ export default function MyRequestsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
           <CardDescription>
-            An overview of your requests that have not been fulfilled yet.
+            An overview of your item requests that are waiting for a lender.
           </CardDescription>
         </CardHeader>
         <CardContent>
