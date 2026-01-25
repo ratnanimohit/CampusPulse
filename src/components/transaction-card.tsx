@@ -31,6 +31,8 @@ export type Transaction = {
   handoverVerified: boolean;
   returnCodeHash: string | null;
   returnVerified: boolean;
+  lenderAwardedKarma?: number;
+  requesterAwardedKarma?: number;
 };
 
 interface TransactionCardProps {

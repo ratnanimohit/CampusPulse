@@ -111,9 +111,12 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma, i
           karmaPoints: increment(karmaToAward),
         });
 
-        // 2. Update the transaction document to indicate feedback has been given
-        const feedbackFieldToUpdate = isFulfiller ? { lenderGaveFeedback: true } : { requesterGaveFeedback: true };
+        // 2. Update the transaction document to indicate feedback has been given AND store awarded karma
+        const feedbackFieldToUpdate = isFulfiller
+          ? { lenderGaveFeedback: true, requesterAwardedKarma: karmaToAward } // Lender is rating requester
+          : { requesterGaveFeedback: true, lenderAwardedKarma: karmaToAward }; // Requester is rating lender
         transaction.update(transactionDocRef, feedbackFieldToUpdate);
+
 
         // 3. Create the feedback document
         transaction.set(newFeedbackRef, {

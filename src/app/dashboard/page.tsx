@@ -66,6 +66,8 @@ type Transaction = {
         nanoseconds: number;
     } | any;
     itemId?: string;
+    lenderAwardedKarma?: number;
+    requesterAwardedKarma?: number;
 };
 
 
@@ -470,7 +472,10 @@ export default function Dashboard() {
                         <Badge variant="outline">{tx.status.replace(/_/g, ' ')}</Badge>
                       </TableCell>
                       <TableCell className="text-right text-green-600 font-medium">
-                        {tx.karma}
+                         {tx.status === 'COMPLETED'
+                            ? (tx.fulfillerId === user?.uid ? tx.lenderAwardedKarma : tx.requesterAwardedKarma) ?? 0
+                            : tx.karma
+                         }
                       </TableCell>
                     </TableRow>
                   ))}

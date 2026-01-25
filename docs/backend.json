@@ -221,6 +221,14 @@
         "requesterGaveFeedback": {
           "type": "boolean",
           "description": "Indicates if the requester has submitted feedback for this transaction."
+        },
+        "lenderAwardedKarma": {
+          "type": "number",
+          "description": "The karma points awarded to the lender based on the requester's rating."
+        },
+        "requesterAwardedKarma": {
+          "type": "number",
+          "description": "The karma points awarded to the requester based on the lender's rating."
         }
       },
       "required": [

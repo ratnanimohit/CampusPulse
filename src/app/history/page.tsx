@@ -19,6 +19,8 @@ type Transaction = {
     nanoseconds: number;
   } | string;
   karma: number;
+  lenderAwardedKarma?: number;
+  requesterAwardedKarma?: number;
 };
 
 export default function HistoryPage() {
@@ -95,7 +97,7 @@ export default function HistoryPage() {
                                 <TableHead>Item</TableHead>
                                 <TableHead>Role</TableHead>
                                 <TableHead>Date</TableHead>
-                                <TableHead className="text-right">Karma</TableHead>
+                                <TableHead className="text-right">Karma Awarded</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -108,7 +110,9 @@ export default function HistoryPage() {
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{getTransactionDate(tx.createdAt)}</TableCell>
-                                    <TableCell className="text-right font-medium text-green-600">{tx.karma || 0}</TableCell>
+                                    <TableCell className="text-right font-medium text-green-600">
+                                        {(tx.fulfillerId === user?.uid ? tx.lenderAwardedKarma : tx.requesterAwardedKarma) ?? 0}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

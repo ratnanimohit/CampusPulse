@@ -62,6 +62,8 @@ export type Transaction = {
   fulfillerLocation?: { lat: number; lng: number };
   lenderGaveFeedback?: boolean;
   requesterGaveFeedback?: boolean;
+  lenderAwardedKarma?: number;
+  requesterAwardedKarma?: number;
 };
 
 type UserProfile = {
@@ -458,7 +460,7 @@ export default function TransactionPage() {
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
+  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'AIzaSyAWFXHOlTS-kfUxNmZ9qFySKcffO87-x50';
 
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
