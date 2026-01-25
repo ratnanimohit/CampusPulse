@@ -479,16 +479,16 @@ export default function TransactionPage() {
   
   // Fetch lender profile
   const lenderProfileRef = useMemoFirebase(
-    () => (firestore && transaction ? doc(firestore, 'userProfiles', transaction.fulfillerId) : null),
-    [firestore, transaction]
+    () => (firestore && transaction?.fulfillerId ? doc(firestore, 'userProfiles', transaction.fulfillerId) : null),
+    [firestore, transaction?.fulfillerId]
   );
   const { data: lenderProfile, isLoading: isLoadingLender } = useDoc<UserProfile>(lenderProfileRef);
 
 
   // Fetch requester profile
   const requesterProfileRef = useMemoFirebase(
-    () => (firestore && transaction ? doc(firestore, 'userProfiles', transaction.requesterId) : null),
-    [firestore, transaction]
+    () => (firestore && transaction?.requesterId ? doc(firestore, 'userProfiles', transaction.requesterId) : null),
+    [firestore, transaction?.requesterId]
   );
   const { data: requesterProfile, isLoading: isLoadingRequester } = useDoc<UserProfile>(requesterProfileRef);
 
