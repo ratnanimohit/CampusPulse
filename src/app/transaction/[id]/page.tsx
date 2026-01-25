@@ -58,7 +58,8 @@ export type Transaction = {
   returnCode?: string | null;
   returnCodeHash: string | null;
   returnVerified: boolean;
-  location?: { lat: number; lng: number };
+  requesterLocation?: { lat: number; lng: number };
+  fulfillerLocation?: { lat: number; lng: number };
 };
 
 type UserProfile = {
@@ -598,6 +599,12 @@ export default function TransactionPage() {
       }
   }
 
+  const locationToShow = isFulfiller ? transaction.requesterLocation : transaction.fulfillerLocation;
+  const meetingLocationTitle = isFulfiller ? "Borrower's Location" : "Lender's Location";
+  const noLocationMessage = isFulfiller 
+      ? "Location data not provided by borrower."
+      : "Location data not provided by lender.";
+
   return (
     <div className="flex justify-center items-start pt-10">
         <Card className="w-full max-w-md overflow-hidden">
@@ -643,18 +650,18 @@ export default function TransactionPage() {
                     <CardContent className="pb-4">
                         <h3 className="text-sm font-medium mb-2 flex items-center gap-2 text-muted-foreground">
                             <MapPin className="h-4 w-4" />
-                            Meeting Location
+                            {meetingLocationTitle}
                         </h3>
                         <div className="h-56 w-full rounded-lg overflow-hidden border">
                            {!hasApiKey ? (
                                 <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
                                     <p className="text-sm text-muted-foreground">Google Maps API Key is not configured. Map functionality is disabled.</p>
                                 </div>
-                            ) : transaction.location ? (
-                                <TransactionMap location={transaction.location} />
+                            ) : locationToShow ? (
+                                <TransactionMap location={locationToShow} />
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center bg-muted text-center p-4">
-                                    <p className="text-sm text-muted-foreground">Location data not provided for this transaction.</p>
+                                    <p className="text-sm text-muted-foreground">{noLocationMessage}</p>
                                 </div>
                             )}
                         </div>

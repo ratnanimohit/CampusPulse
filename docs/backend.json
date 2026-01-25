@@ -183,6 +183,36 @@
           "type": "string",
           "format": "date-time",
           "description": "Timestamp when the transaction was last updated."
+        },
+        "requesterLocation": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The geographical coordinates where the item was requested (borrower's location).",
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lng": {
+              "type": "number"
+            }
+          }
+        },
+        "fulfillerLocation": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The geographical coordinates of the user lending the item (lender's location).",
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lng": {
+              "type": "number"
+            }
+          }
         }
       },
       "required": [

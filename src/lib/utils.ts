@@ -21,4 +21,22 @@ export function simpleHash(str: string): string {
   return hash.toString();
 }
 
-    
+export const getCurrentLocation = (): Promise<{ lat: number; lng: number } | null> => {
+  return new Promise(resolve => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      position =>
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }),
+      error => {
+        console.warn(`Geolocation error: ${error.message}`);
+        resolve(null); // On error, resolve with null
+      }
+    );
+  });
+};

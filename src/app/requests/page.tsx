@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { getCurrentLocation } from '@/lib/utils';
 
 const requestFormSchema = z.object({
   itemName: z.string().min(1, 'Item name is required.'),
@@ -42,26 +43,6 @@ const requestFormSchema = z.object({
 });
 
 type RequestFormValues = z.infer<typeof requestFormSchema>;
-
-const getCurrentLocation = (): Promise<{ lat: number; lng: number } | null> => {
-  return new Promise(resolve => {
-    if (typeof window === 'undefined' || !navigator.geolocation) {
-      resolve(null);
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      position =>
-        resolve({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        }),
-      error => {
-        console.warn(`Geolocation error: ${error.message}`);
-        resolve(null); // On error, resolve with null
-      }
-    );
-  });
-};
 
 export default function RequestsPage() {
   const { toast } = useToast();

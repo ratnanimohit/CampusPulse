@@ -34,7 +34,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { simpleHash } from '@/lib/utils';
+import { getCurrentLocation, simpleHash } from '@/lib/utils';
 
 type ItemRequest = {
   id: string;
@@ -187,6 +187,7 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
+      const fulfillerLocation = await getCurrentLocation();
       const batch = writeBatch(firestore);
 
       // 1. Create the transaction document
@@ -209,7 +210,8 @@ export default function Dashboard() {
         returnVerified: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        ...(request.location && { location: request.location }),
+        ...(request.location && { requesterLocation: request.location }),
+        ...(fulfillerLocation && { fulfillerLocation: fulfillerLocation }),
       };
       batch.set(transactionDocRef, transactionData);
 
