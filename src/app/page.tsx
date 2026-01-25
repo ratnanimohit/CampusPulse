@@ -33,14 +33,14 @@ import { setDoc, doc } from 'firebase/firestore';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 
-const glaEmailValidator = (email: string) => email.endsWith('@gla.ac.in');
+const allowedEmailValidator = (email: string) => email.endsWith('@gla.ac.in') || email.endsWith('@gmail.com');
 
 const loginSchema = z.object({
   email: z
     .string()
     .email('Invalid email address.')
-    .refine(glaEmailValidator, {
-      message: "Email must be a '@gla.ac.in' address.",
+    .refine(allowedEmailValidator, {
+      message: "Email must be a '@gla.ac.in' or '@gmail.com' address.",
     }),
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
@@ -51,8 +51,8 @@ const signupSchema = z.object({
     email: z
         .string()
         .email('Invalid email address.')
-        .refine(glaEmailValidator, {
-        message: "Email must be a '@gla.ac.in' address.",
+        .refine(allowedEmailValidator, {
+          message: "Email must be a '@gla.ac.in' or '@gmail.com' address.",
         }),
     password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
@@ -82,7 +82,7 @@ export default function LoginPage() {
       email: '',
       password: '',
       formType: formType,
-      ...(formType === 'signup' ? { firstName: '', lastName: '' } : {  firstName: undefined, lastName: undefined }),
+      ...(formType === 'signup' ? { firstName: '', lastName: '' } : {}),
     },
   });
 
@@ -92,7 +92,7 @@ export default function LoginPage() {
       email: '',
       password: '',
       formType: formType,
-      ...(formType === 'signup' ? { firstName: '', lastName: '' } : { firstName: undefined, lastName: undefined }),
+      ...(formType === 'signup' ? { firstName: '', lastName: '' } : {}),
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formType]);
@@ -288,7 +288,7 @@ export default function LoginPage() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>GLA Email Address</FormLabel>
+                    <FormLabel>Email Address</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="your.name@gla.ac.in"

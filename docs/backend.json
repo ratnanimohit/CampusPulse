@@ -12,7 +12,7 @@
         },
         "email": {
           "type": "string",
-          "description": "User's email address (must be @gla.ac.in for MVP).",
+          "description": "User's email address. Must be a @gla.ac.in or @gmail.com domain.",
           "format": "email"
         },
         "firstName": {
