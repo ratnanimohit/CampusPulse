@@ -69,10 +69,11 @@ export default function MyRequestsPage() {
   
   // 3. On the client, determine which requests are fulfilled and should not be displayed.
   const displayRequests = useMemo(() => {
-    if (!myRequests) return [];
-    // If transactions haven't loaded yet, show all requests briefly to avoid layout shift, 
-    // they will be filtered out once transactions load.
-    if (!associatedTransactions) return myRequests;
+    // Only filter when both data sources are loaded.
+    // The `isLoading` flag below will handle showing the spinner in the meantime.
+    if (!myRequests || !associatedTransactions) {
+      return [];
+    }
 
     // A request is considered "fulfilled" if a transaction for it exists and is NOT cancelled.
     const fulfilledRequestIds = new Set(
@@ -108,7 +109,7 @@ export default function MyRequestsPage() {
         <CardHeader>
           <CardTitle className="font-headline text-2xl">My Requests</CardTitle>
           <CardDescription>
-            An overview of your item requests that are waiting for a lender.
+            An overview of your item requests that are waiting for a lender. Once fulfilled, they will appear in Active Transactions.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,7 +171,7 @@ export default function MyRequestsPage() {
                 You have no pending requests
               </h3>
               <p className="text-sm text-muted-foreground">
-                Create a new request to see it here.
+                Create a new request to see it here. Once fulfilled, it will move to Active Transactions.
               </p>
             </div>
           )}
