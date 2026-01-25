@@ -36,20 +36,29 @@ export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Fetch only the current user's item requests that are still PENDING.
-  const myRequestsQuery = useMemoFirebase(
+  // Fetch ALL of the current user's item requests, regardless of status.
+  // This is a simpler query that is less likely to fail due to missing composite indexes.
+  const allMyRequestsQuery = useMemoFirebase(
     () =>
       user && firestore
         ? query(
             collection(firestore, 'itemRequests'),
             where('requesterId', '==', user.uid),
-            where('status', '==', 'PENDING'),
             orderBy('createdAt', 'desc')
           )
         : null,
     [user, firestore]
   );
-  const { data: myRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(myRequestsQuery);
+  const { data: allMyRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(allMyRequestsQuery);
+
+  // Filter for only PENDING requests on the client side.
+  const pendingRequests = useMemo(() => {
+    if (!allMyRequests) {
+      return [];
+    }
+    return allMyRequests.filter(req => req.status === 'PENDING');
+  }, [allMyRequests]);
+
 
   const cancelRequest = async (requestId: string) => {
     if (!firestore) return;
@@ -76,7 +85,7 @@ export default function MyRequestsPage() {
             <div className="flex justify-center items-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : myRequests && myRequests.length > 0 ? (
+          ) : pendingRequests && pendingRequests.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -87,7 +96,7 @@ export default function MyRequestsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {myRequests.map(req => (
+                {pendingRequests.map(req => (
                     <TableRow key={req.id}>
                       <TableCell className="font-medium">{req.itemName}</TableCell>
                       <TableCell>
