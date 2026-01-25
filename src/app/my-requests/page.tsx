@@ -36,26 +36,25 @@ export default function MyRequestsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // Fetch ALL PENDING item requests. This is less efficient but more robust.
-  // We will filter for the current user's requests on the client.
-  const allPendingRequestsQuery = useMemoFirebase(
+  // Fetch ALL of the current user's item requests, regardless of status.
+  const myRequestsQuery = useMemoFirebase(
     () =>
-      firestore
+      firestore && user
         ? query(
             collection(firestore, 'itemRequests'),
-            where('status', '==', 'PENDING')
+            where('requesterId', '==', user.uid)
           )
         : null,
-    [firestore]
+    [firestore, user]
   );
-  const { data: allPendingRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(allPendingRequestsQuery);
+  const { data: myRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(myRequestsQuery);
 
-  // Filter for only the current user's PENDING requests and sort them on the client side.
+  // Filter for only PENDING requests on the client side. This will update in real-time.
   const pendingRequests = useMemo(() => {
-    if (!allPendingRequests || !user) {
+    if (!myRequests) {
       return [];
     }
-    const filtered = allPendingRequests.filter(req => req.requesterId === user.uid);
+    const filtered = myRequests.filter(req => req.status === 'PENDING');
     
     // Sort by createdAt descending. Handles both server timestamps and null/undefined values.
     filtered.sort((a, b) => {
@@ -65,7 +64,7 @@ export default function MyRequestsPage() {
     });
 
     return filtered;
-  }, [allPendingRequests, user]);
+  }, [myRequests]);
 
 
   const cancelRequest = async (requestId: string) => {
