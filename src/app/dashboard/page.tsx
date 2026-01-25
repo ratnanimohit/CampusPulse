@@ -34,8 +34,8 @@ import {
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
+import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 
 type ItemRequest = {
   id: string;
@@ -70,27 +70,6 @@ type Transaction = {
     itemId?: string;
     lenderAwardedKarma?: number;
     requesterAwardedKarma?: number;
-};
-
-
-const findImageUrl = (itemName: string): string => {
-  const lowerItemName = itemName.toLowerCase();
-
-  // Sort by id length descending to match more specific keywords first (e.g. "lab coat" before "coat")
-  const sortedPlaceholders = [...PlaceHolderImages].sort((a, b) => b.id.length - a.id.length);
-
-  // Check if item name contains a keyword
-  const foundImage = sortedPlaceholders.find(img => lowerItemName.includes(img.id));
-
-  if (foundImage) {
-    return foundImage.imageUrl;
-  }
-  
-  // Fallback to a generic item image
-  const genericImage = PlaceHolderImages.find(img => img.id === 'item');
-  
-  // Fallback to picsum, using a more robust encoding for the URL seed
-  return genericImage?.imageUrl ?? `https://picsum.photos/seed/${encodeURIComponent(lowerItemName)}/320/180`;
 };
 
 
@@ -231,6 +210,13 @@ export default function Dashboard() {
     setIsProcessing(true);
 
     try {
+      const imageResult = await generateImageFromPrompt({ prompt: request.itemName });
+      const itemImageUrl = imageResult.imageUrl;
+      
+      if (!itemImageUrl) {
+        throw new Error('Failed to generate item image.');
+      }
+      
       const fulfillerLocation = await getCurrentLocation();
       const batch = writeBatch(firestore);
 
@@ -243,7 +229,7 @@ export default function Dashboard() {
         requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
-        itemImageUrl: findImageUrl(request.itemName),
+        itemImageUrl: itemImageUrl,
         karma: 10, // Base karma is 10 for all transactions
         status: 'HANDOVER_PENDING',
         handoverCode: handoverCode,
@@ -279,7 +265,7 @@ export default function Dashboard() {
       toast({
         variant: 'destructive',
         title: 'Fulfillment Failed',
-        description: 'Could not start the transaction process.',
+        description: (error as Error).message || 'Could not start the transaction process.',
       });
     } finally {
         setIsProcessing(false);
@@ -564,5 +550,3 @@ export default function Dashboard() {
     </>
   );
 }
-
-    
