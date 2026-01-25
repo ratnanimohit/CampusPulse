@@ -32,10 +32,10 @@ const generateImageFromPromptFlow = ai.defineFlow(
   },
   async (input) => {
     const { media } = await ai.generate({
-      model: 'googleai/imagen-4.0-fast-generate-001',
+      model: 'googleai/gemini-2.5-flash-image-preview',
       prompt: `A high-quality, professional product photograph of a single ${input.prompt}, centered on a clean, neutral background.`,
       config: {
-        aspectRatio: '16:9',
+        responseModalities: ['TEXT', 'IMAGE'],
       }
     });
 
