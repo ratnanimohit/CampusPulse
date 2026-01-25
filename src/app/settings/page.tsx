@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 
 type UserProfile = {
@@ -21,10 +22,12 @@ type UserProfile = {
 export default function SettingsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     
     const [name, setName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [isResettingPassword, setIsResettingPassword] = useState(false);
     
     const [emailNotifications, setEmailNotifications] = useState(true);
     const [pushNotifications, setPushNotifications] = useState(false);
@@ -39,7 +42,6 @@ export default function SettingsPage() {
 
     useEffect(() => {
         setIsClient(true);
-        // Load notification settings from localStorage
         const savedSettings = localStorage.getItem('userSettings');
         if (savedSettings) {
             try {
@@ -54,13 +56,11 @@ export default function SettingsPage() {
     }, []);
 
     useEffect(() => {
-        // Pre-fill name from Firestore profile
         if (userProfile) {
             setName(`${userProfile.firstName} ${userProfile.lastName}`);
         }
     }, [userProfile]);
 
-    // Save notification settings to localStorage whenever they change
     useEffect(() => {
         if (isClient) {
             const settings = { name, emailNotifications, pushNotifications };
@@ -70,7 +70,6 @@ export default function SettingsPage() {
 
     const handleSaveChanges = async () => {
         setIsSaving(true);
-        // Save Profile Info
         if (userProfileRef) {
             const nameParts = name.split(' ');
             const firstName = nameParts[0] || '';
@@ -86,14 +85,41 @@ export default function SettingsPage() {
             }
         }
         
-        // You could also save notification settings to Firestore here if needed
-
         toast({
             title: "Settings Saved",
             description: "Your changes have been saved successfully.",
         });
         setIsSaving(false);
     };
+
+    const handlePasswordReset = async () => {
+        if (!user || !user.email) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Could not find your email address to send a reset link.',
+            });
+            return;
+        }
+
+        setIsResettingPassword(true);
+        try {
+            await sendPasswordResetEmail(auth, user.email);
+            toast({
+                title: 'Password Reset Email Sent',
+                description: 'Check your inbox for a link to reset your password.',
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Failed to Send Email',
+                description: error.message || 'An unexpected error occurred.',
+            });
+        } finally {
+            setIsResettingPassword(false);
+        }
+    };
+
 
     if (!isClient || isLoadingProfile) {
         return (
@@ -110,7 +136,7 @@ export default function SettingsPage() {
                     <h1 className="text-3xl font-bold font-headline">Settings</h1>
                     <p className="text-muted-foreground">Manage your account and notification settings.</p>
                 </div>
-                <Button onClick={handleSaveChanges} disabled={isSaving}>
+                <Button onClick={handleSaveChanges} disabled={isSaving || isResettingPassword}>
                     {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                 </Button>
@@ -124,7 +150,7 @@ export default function SettingsPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <Label htmlFor="name">Full Name</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isSaving} />
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} disabled={isSaving || isResettingPassword} />
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
@@ -163,7 +189,10 @@ export default function SettingsPage() {
                     <CardDescription>Manage your password and account security.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button variant="outline">Change Password</Button>
+                    <Button variant="outline" onClick={handlePasswordReset} disabled={isResettingPassword || isSaving}>
+                        {isResettingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Change Password
+                    </Button>
                 </CardContent>
             </Card>
         </div>

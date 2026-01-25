@@ -28,6 +28,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { setDoc, doc } from 'firebase/firestore';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -57,10 +58,15 @@ const signupSchema = z.object({
     password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
 
-// Use a discriminated union to handle both forms
+const forgotPasswordSchema = z.object({
+    email: z.string().email('Invalid email address.'),
+});
+
+// Use a discriminated union to handle all three forms
 const formSchema = z.discriminatedUnion("formType", [
   loginSchema.extend({ formType: z.literal("login") }),
   signupSchema.extend({ formType: z.literal("signup") }),
+  forgotPasswordSchema.extend({ formType: z.literal("forgotPassword") }),
 ]);
 
 type FormValues = z.infer<typeof formSchema>;
@@ -73,7 +79,7 @@ export default function LoginPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formType, setFormType] = useState<'login' | 'signup'>('login');
+  const [formType, setFormType] = useState<'login' | 'signup' | 'forgotPassword'>('login');
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<FormValues>({
@@ -81,8 +87,9 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      formType: formType,
-      ...(formType === 'signup' ? { firstName: '', lastName: '' } : {}),
+      formType: 'login',
+      firstName: '',
+      lastName: '',
     },
   });
 
@@ -154,8 +161,6 @@ export default function LoginPage() {
         const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
         
         if (!userCredential.user.emailVerified) {
-          // Firebase automatically signs the user in, so we sign them out
-          // and throw an error to show the verification message.
           await auth.signOut();
           throw new Error('EMAIL_NOT_VERIFIED');
         }
@@ -174,7 +179,6 @@ export default function LoginPage() {
         );
         const newUser = userCredential.user;
         
-        // Create user profile in Firestore first
         await setDoc(doc(firestore, 'userProfiles', newUser.uid), {
           id: newUser.uid,
           email: newUser.email,
@@ -186,10 +190,7 @@ export default function LoginPage() {
           ratingsCount: 0,
         });
 
-        // Then send verification email
         await sendEmailVerification(newUser);
-        
-        // And sign the user out so they have to log in after verifying
         await auth.signOut();
 
         toast({
@@ -198,7 +199,17 @@ export default function LoginPage() {
           duration: 10000,
         });
 
-        setFormType('login'); // Switch to login view after successful signup
+        setFormType('login');
+        form.reset();
+      } else if (data.formType === 'forgotPassword') {
+        const forgotData = data as z.infer<typeof forgotPasswordSchema>;
+        await sendPasswordResetEmail(auth, forgotData.email);
+        toast({
+            title: 'Password Reset Email Sent',
+            description: 'Check your inbox for a link to reset your password.',
+            duration: 10000,
+        });
+        setFormType('login');
         form.reset();
       }
     } catch (error) {
@@ -230,12 +241,14 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-headline">
-            Welcome to CampusPulse
+             {formType === 'login' && 'Welcome to CampusPulse'}
+             {formType === 'signup' && 'Create Your Account'}
+             {formType === 'forgotPassword' && 'Reset Your Password'}
           </CardTitle>
           <CardDescription>
-            {formType === 'login'
-              ? 'Sign in to your account to continue.'
-              : 'Create an account to join the community.'}
+            {formType === 'login' && 'Sign in to your account to continue.'}
+            {formType === 'signup' && 'Create an account to join the community.'}
+            {formType === 'forgotPassword' && "We'll send a password reset link to your email."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -301,41 +314,42 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <div className="relative">
-                      <FormControl>
-                        <Input
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="••••••••"
-                          {...field}
-                          disabled={isSubmitting}
-                          className="pr-10"
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
-                        disabled={isSubmitting}
-                      >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </button>
-                    </div>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {formType !== 'forgotPassword' && (
+                  <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <div className="relative">
+                          <FormControl>
+                            <Input
+                              type={showPassword ? 'text' : 'password'}
+                              placeholder="••••••••"
+                              {...field}
+                              disabled={isSubmitting}
+                              className="pr-10"
+                              value={field.value || ''}
+                            />
+                          </FormControl>
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground"
+                            disabled={isSubmitting}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+              )}
+              
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {formType === 'login' ? 'Sign In' : 'Sign Up'}
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {formType === 'login' ? 'Sign In' : formType === 'signup' ? 'Sign Up' : 'Send Reset Link'}
               </Button>
             </form>
           </Form>
@@ -343,29 +357,28 @@ export default function LoginPage() {
             {formType === 'login' ? (
               <>
                 Don&apos;t have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0"
-                  onClick={() => {
-                    setFormType('signup');
-                  }}
-                >
+                <Button variant="link" className="p-0" onClick={() => setFormType('signup')}>
                   Sign Up
                 </Button>
+                <span className="mx-2 text-muted-foreground">|</span>
+                <Button variant="link" className="p-0" onClick={() => setFormType('forgotPassword')}>
+                    Forgot Password?
+                </Button>
               </>
-            ) : (
+            ) : formType === 'signup' ? (
               <>
                 Already have an account?{' '}
-                <Button
-                  variant="link"
-                  className="p-0"
-                  onClick={() => {
-                    setFormType('login');
-                  }}
-                >
+                <Button variant="link" className="p-0" onClick={() => setFormType('login')}>
                   Sign In
                 </Button>
               </>
+            ) : (
+                <>
+                    Remember your password?{' '}
+                    <Button variant="link" className="p-0" onClick={() => setFormType('login')}>
+                        Sign In
+                    </Button>
+                </>
             )}
           </div>
         </CardContent>
