@@ -17,8 +17,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, FileX, Loader2 } from 'lucide-react';
+import { PlusCircle, FileX, Loader2, Siren } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { getCurrentLocation, simpleHash } from '@/lib/utils';
+import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
 
 type ItemRequest = {
   id: string;
@@ -87,6 +88,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<ItemRequest | null>(null);
+  const [nearbyEmergencyRequests, setNearbyEmergencyRequests] = useState<ItemRequest[]>([]);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -99,6 +101,18 @@ export default function Dashboard() {
     [firestore]
   );
   const { data: allPendingRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
+
+  // New query for emergency requests
+  const emergencyRequestsQuery = useMemoFirebase(
+    () => firestore ? query(
+        collection(firestore, 'itemRequests'),
+        where('status', '==', 'PENDING'),
+        where('urgency', '==', 'emergency')
+    ) : null,
+    [firestore]
+  );
+  const { data: allEmergencyRequests } = useCollection<ItemRequest>(emergencyRequestsQuery);
+
 
   // 2. Filter for community requests (not made by the current user) and sort.
   const communityRequests = useMemo(() => {
@@ -163,6 +177,36 @@ export default function Dashboard() {
   useEffect(() => {
     setIsClient(true);
   }, []);
+
+  // Effect to find nearby emergency requests
+  useEffect(() => {
+    if (!allEmergencyRequests || !user) return;
+
+    const checkNearby = async () => {
+        const userLocation = await getCurrentLocation();
+        if (!userLocation) return;
+
+        const nearby = allEmergencyRequests.filter(req => {
+            // Don't show notifications for user's own requests
+            if (req.requesterId === user.uid) return false;
+
+            if (req.location) {
+                const distance = getDistance(
+                    userLocation.lat,
+                    userLocation.lng,
+                    req.location.lat,
+                    req.location.lng
+                );
+                return distance <= 500; // 500 meters
+            }
+            return false;
+        });
+        
+        setNearbyEmergencyRequests(nearby);
+    };
+
+    checkNearby();
+  }, [allEmergencyRequests, user]);
 
   useEffect(() => {
     if (isClient) {
@@ -254,6 +298,15 @@ export default function Dashboard() {
         isFulfilling={isProcessing}
     />
     <div className="flex flex-col gap-8">
+      {nearbyEmergencyRequests.length > 0 && (
+          <Alert variant="destructive">
+              <Siren className="h-4 w-4" />
+              <AlertTitle>Emergency Nearby!</AlertTitle>
+              <AlertDescription>
+                  {nearbyEmergencyRequests.length} urgent request(s) within 500m of you. Can you help?
+              </AlertDescription>
+          </Alert>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-headline">
