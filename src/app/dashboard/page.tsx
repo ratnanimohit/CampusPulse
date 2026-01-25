@@ -244,7 +244,7 @@ export default function Dashboard() {
         itemId: request.id,
         itemName: request.itemName,
         itemImageUrl: findImageUrl(request.itemName),
-        karma: 10, // Example karma
+        karma: 10, // Base karma is 10 for all transactions
         status: 'HANDOVER_PENDING',
         handoverCode: handoverCode,
         handoverCodeHash: simpleHash(handoverCode),
@@ -256,6 +256,8 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
         ...(request.location && { requesterLocation: request.location }),
         ...(fulfillerLocation && { fulfillerLocation: fulfillerLocation }),
+        lenderGaveFeedback: false,
+        requesterGaveFeedback: false,
       };
       batch.set(transactionDocRef, transactionData);
 

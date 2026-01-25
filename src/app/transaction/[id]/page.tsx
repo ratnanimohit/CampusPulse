@@ -60,6 +60,8 @@ export type Transaction = {
   returnVerified: boolean;
   requesterLocation?: { lat: number; lng: number };
   fulfillerLocation?: { lat: number; lng: number };
+  lenderGaveFeedback?: boolean;
+  requesterGaveFeedback?: boolean;
 };
 
 type UserProfile = {
@@ -157,7 +159,7 @@ function LenderView({
 
       toast({
         title: 'Transaction Completed!',
-        description: `Please leave feedback to award karma points.`,
+        description: `Please leave feedback to finalize the karma exchange.`,
       });
     } catch (error: any) {
       console.error("Error completing transaction:", error);
@@ -456,7 +458,7 @@ export default function TransactionPage() {
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'PASTE_YOUR_GOOGLE_MAPS_API_KEY_HERE';
+  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'AIzaSyAWFXHOlTS-kfUxNmZ9qFySKcffO87-x50';
 
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
@@ -500,17 +502,18 @@ export default function TransactionPage() {
     ];
   }, [lenderProfile, requesterProfile, transaction]);
 
-  const feedbackQuery = useMemoFirebase(
-    () => (firestore && id && user) ? query(
-      collection(firestore, 'feedback'),
-      where('transactionId', '==', id),
-      where('raterId', '==', user.uid)
-    ) : null,
-    [firestore, id, user]
-  );
-  const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
+  // This query is no longer used to determine if feedback was given.
+  // const feedbackQuery = useMemoFirebase(
+  //   () => (firestore && id && user) ? query(
+  //     collection(firestore, 'feedback'),
+  //     where('transactionId', '==', id),
+  //     where('raterId', '==', user.uid)
+  //   ) : null,
+  //   [firestore, id, user]
+  // );
+  // const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
 
-  const isLoading = isUserLoading || isTransactionLoading || isLoadingFeedback || isLoadingLender || isLoadingRequester;
+  const isLoading = isUserLoading || isTransactionLoading || isLoadingLender || isLoadingRequester;
 
   if (isLoading) {
     return (
@@ -545,7 +548,8 @@ export default function TransactionPage() {
   const peerRole = isFulfiller ? 'Borrower' : 'Lender';
 
   if (transaction.status === 'COMPLETED' || transaction.status === 'CANCELLED') {
-      const hasGivenFeedback = userFeedback && userFeedback.length > 0;
+      const hasGivenFeedback = isFulfiller ? transaction.lenderGaveFeedback : transaction.requesterGaveFeedback;
+      const peerHasGivenFeedback = isFulfiller ? transaction.requesterGaveFeedback : transaction.lenderGaveFeedback;
       const ratedUserId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
 
       return (
@@ -553,12 +557,20 @@ export default function TransactionPage() {
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <CardTitle className="font-headline text-center">{transaction.status === 'COMPLETED' ? 'Transaction Complete' : 'Transaction Cancelled'}</CardTitle>
+                     {transaction.status === 'COMPLETED' && (
+                        <CardDescription className="text-center pt-2">
+                            This transaction is now complete. Please rate your peer to finalize the karma exchange.
+                        </CardDescription>
+                     )}
                 </CardHeader>
                 <CardContent>
                     {transaction.status === 'COMPLETED' && user && (
                        hasGivenFeedback ? (
                            <div className="text-center">
                                <p className="text-muted-foreground">Thank you for your feedback!</p>
+                                {!peerHasGivenFeedback && (
+                                   <p className="text-xs text-muted-foreground mt-2">Waiting for the other user to submit their feedback.</p>
+                                )}
                            </div>
                        ) : (
                            <FeedbackForm 
@@ -566,6 +578,7 @@ export default function TransactionPage() {
                                 ratedUserId={ratedUserId}
                                 raterId={user.uid}
                                 baseKarma={transaction.karma}
+                                isFulfiller={isFulfiller}
                            />
                        )
                     )}

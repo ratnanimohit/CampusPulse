@@ -213,6 +213,14 @@
               "type": "number"
             }
           }
+        },
+        "lenderGaveFeedback": {
+          "type": "boolean",
+          "description": "Indicates if the lender has submitted feedback for this transaction."
+        },
+        "requesterGaveFeedback": {
+          "type": "boolean",
+          "description": "Indicates if the requester has submitted feedback for this transaction."
         }
       },
       "required": [

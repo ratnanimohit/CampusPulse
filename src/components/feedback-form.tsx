@@ -38,9 +38,10 @@ interface FeedbackFormProps {
   ratedUserId: string;
   raterId: string;
   baseKarma: number;
+  isFulfiller: boolean;
 }
 
-export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }: FeedbackFormProps) {
+export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma, isFulfiller }: FeedbackFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [rating, setRating] = useState(0);
@@ -56,7 +57,7 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
   });
 
   const calculateKarmaPoints = (rating: number, baseKarmaValue: number): number => {
-    if (rating < 1 || rating > 5) return 0; // Handle edge cases
+    if (rating < 1 || rating > 5) return 0;
     // 1 star = 20%, 2 stars = 40%, ..., 5 stars = 100%
     const percentage = rating * 0.2;
     return Math.round(baseKarmaValue * percentage);
@@ -75,9 +76,9 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
     setIsSubmitting(true);
 
     const ratedUserRef = doc(firestore, 'userProfiles', ratedUserId);
-    const raterRef = doc(firestore, 'userProfiles', raterId);
     const feedbackColRef = collection(firestore, 'feedback');
     const newFeedbackRef = doc(feedbackColRef);
+    const transactionDocRef = doc(firestore, 'transactions', transactionId);
 
     try {
       await runTransaction(firestore, async (transaction) => {
@@ -85,10 +86,10 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
         if (!ratedUserDoc.exists()) {
           throw new Error('Rated user profile not found!');
         }
-
-        const raterDoc = await transaction.get(raterRef);
-        if (!raterDoc.exists()) {
-          throw new Error('Rater user profile not found!');
+        
+        const raterDocSnapshot = await transaction.get(doc(firestore, 'userProfiles', raterId));
+        if (!raterDocSnapshot.exists()) {
+          throw new Error("Rater's user profile not found!");
         }
 
         const karmaToAward = calculateKarmaPoints(rating, baseKarma);
@@ -100,7 +101,7 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
         const newRatingCount = oldRatingCount + 1;
         const newAverageRating = ((oldRating * oldRatingCount) + rating) / newRatingCount;
 
-        const raterData = raterDoc.data();
+        const raterData = raterDocSnapshot.data();
         const raterUser = getAuth().currentUser;
 
         // 1. Update the rated user's profile with new rating and calculated karma
@@ -110,10 +111,9 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
           karmaPoints: increment(karmaToAward),
         });
 
-        // 2. Give the rater karma points for providing feedback (incentive)
-        transaction.update(raterRef, {
-          karmaPoints: increment(5),
-        });
+        // 2. Update the transaction document to indicate feedback has been given
+        const feedbackFieldToUpdate = isFulfiller ? { lenderGaveFeedback: true } : { requesterGaveFeedback: true };
+        transaction.update(transactionDocRef, feedbackFieldToUpdate);
 
         // 3. Create the feedback document
         transaction.set(newFeedbackRef, {
@@ -133,7 +133,7 @@ export function FeedbackForm({ transactionId, ratedUserId, raterId, baseKarma }:
 
       toast({
         title: 'Feedback Submitted!',
-        description: "You've earned 5 karma points for rating. Thank you!",
+        description: 'Thank you for rating!',
       });
       setFeedbackSubmitted(true);
 
