@@ -19,7 +19,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { FileX, Loader2 } from 'lucide-react';
 
 export type ItemRequest = {
@@ -37,26 +37,34 @@ export default function MyRequestsPage() {
   const firestore = useFirestore();
 
   // Fetch ALL of the current user's item requests, regardless of status.
-  // This is a simpler query that is less likely to fail due to missing composite indexes.
+  // REMOVED orderBy to avoid needing a composite index. Sorting is now done client-side.
   const allMyRequestsQuery = useMemoFirebase(
     () =>
       user && firestore
         ? query(
             collection(firestore, 'itemRequests'),
-            where('requesterId', '==', user.uid),
-            orderBy('createdAt', 'desc')
+            where('requesterId', '==', user.uid)
           )
         : null,
     [user, firestore]
   );
   const { data: allMyRequests, isLoading: isLoadingMyRequests } = useCollection<ItemRequest>(allMyRequestsQuery);
 
-  // Filter for only PENDING requests on the client side.
+  // Filter for only PENDING requests and sort them on the client side.
   const pendingRequests = useMemo(() => {
     if (!allMyRequests) {
       return [];
     }
-    return allMyRequests.filter(req => req.status === 'PENDING');
+    const filtered = allMyRequests.filter(req => req.status === 'PENDING');
+    
+    // Sort by createdAt descending. Handles both server timestamps and null/undefined values.
+    filtered.sort((a, b) => {
+        const timeA = a.createdAt?.seconds ?? 0;
+        const timeB = b.createdAt?.seconds ?? 0;
+        return timeB - timeA;
+    });
+
+    return filtered;
   }, [allMyRequests]);
 
 
@@ -148,3 +156,5 @@ export default function MyRequestsPage() {
     </>
   );
 }
+
+    

@@ -28,7 +28,6 @@ import {
   where,
   serverTimestamp,
   or,
-  orderBy,
   writeBatch,
   doc,
 } from 'firebase/firestore';
@@ -95,17 +94,25 @@ export default function Dashboard() {
   const requestsQuery = useMemoFirebase(
     () => firestore ? query(
         collection(firestore, 'itemRequests'),
-        where('status', '==', 'PENDING'),
-        orderBy('createdAt', 'desc')
+        where('status', '==', 'PENDING')
     ) : null,
     [firestore]
   );
   const { data: allPendingRequests, isLoading: isLoadingRequests } = useCollection<ItemRequest>(requestsQuery);
 
-  // 2. Filter for community requests (not made by the current user).
+  // 2. Filter for community requests (not made by the current user) and sort.
   const communityRequests = useMemo(() => {
     if (!allPendingRequests || !user) return [];
-    return allPendingRequests.filter(req => req.requesterId !== user.uid);
+    const filtered = allPendingRequests.filter(req => req.requesterId !== user.uid);
+    
+    // Sort by createdAt descending
+    filtered.sort((a, b) => {
+        const dateA = a.createdAt?.seconds ?? 0;
+        const dateB = b.createdAt?.seconds ?? 0;
+        return dateB - dateA;
+    });
+
+    return filtered;
   }, [allPendingRequests, user]);
 
   // Fetch user profile for karma points
@@ -497,3 +504,5 @@ export default function Dashboard() {
     </>
   );
 }
+
+    
