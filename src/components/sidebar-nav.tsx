@@ -17,6 +17,10 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ComponentProps } from 'react';
 import { useAuth } from '@/firebase';
+import { useAtom } from 'jotai';
+import { navigationLockedAtom } from '@/lib/state/app-state';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface SidebarNavProps extends ComponentProps<'nav'> {
   isMobile?: boolean;
@@ -25,6 +29,31 @@ interface SidebarNavProps extends ComponentProps<'nav'> {
 export function SidebarNav({ className, isMobile = false, ...props }: SidebarNavProps) {
   const pathname = usePathname();
   const auth = useAuth();
+  const [navigationLocked] = useAtom(navigationLockedAtom);
+  const { toast } = useToast();
+
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (navigationLocked) {
+      e.preventDefault();
+      toast({
+        variant: 'destructive',
+        title: 'Action Required',
+        description: 'Please submit your feedback before navigating away.',
+      });
+    }
+  };
+
+  const handleSignOutClick = () => {
+    if (navigationLocked) {
+      toast({
+        variant: 'destructive',
+        title: 'Action Required',
+        description: 'Please submit your feedback before navigating away.',
+      });
+      return;
+    }
+    auth.signOut();
+  };
   
   const navLinks = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
@@ -44,10 +73,14 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
   const NavLink = ({ href, icon: Icon, label, badge, onClick }: typeof navLinks[0] & { badge?: string, onClick?: (e: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void }) => (
     <Link
       href={href}
-      onClick={onClick}
+      onClick={(e) => {
+        handleLinkClick(e);
+        onClick?.(e);
+      }}
+      aria-disabled={navigationLocked}
       className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", {
         "text-primary bg-accent": isActive(href),
-      })}
+      }, navigationLocked && "cursor-not-allowed opacity-50")}
     >
       <Icon className="h-4 w-4" />
       {label}
@@ -71,7 +104,8 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
       >
         {navLinks.map(link => <NavLink key={link.href} {...link} />)}
         <button
-          onClick={() => auth.signOut()}
+          onClick={handleSignOutClick}
+          disabled={navigationLocked}
           className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary")}
           >
           <LogOut className="h-4 w-4" />

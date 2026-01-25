@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import {
@@ -35,6 +35,8 @@ import { FeedbackForm } from '@/components/feedback-form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatInterface } from "@/components/chat-interface";
 import { PeerProfileHeader } from '@/components/peer-profile-header';
+import { useAtom } from 'jotai';
+import { navigationLockedAtom } from '@/lib/state/app-state';
 
 
 export type Transaction = {
@@ -461,6 +463,8 @@ export default function TransactionPage() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'AIzaSyAWFXHOlTS-kfUxNmZ9qFySKcffO87-x50';
+  const [, setNavigationLocked] = useAtom(navigationLockedAtom);
+
 
   const transactionDocRef = useMemoFirebase(
     () => (firestore && id ? doc(firestore, 'transactions', id) : null),
@@ -504,18 +508,21 @@ export default function TransactionPage() {
     ];
   }, [lenderProfile, requesterProfile, transaction]);
 
-  // This query is no longer used to determine if feedback was given.
-  // const feedbackQuery = useMemoFirebase(
-  //   () => (firestore && id && user) ? query(
-  //     collection(firestore, 'feedback'),
-  //     where('transactionId', '==', id),
-  //     where('raterId', '==', user.uid)
-  //   ) : null,
-  //   [firestore, id, user]
-  // );
-  // const { data: userFeedback, isLoading: isLoadingFeedback } = useCollection(feedbackQuery);
-
   const isLoading = isUserLoading || isTransactionLoading || isLoadingLender || isLoadingRequester;
+
+  const isFulfiller = user?.uid === transaction?.fulfillerId;
+  const hasGivenFeedback = isFulfiller ? transaction?.lenderGaveFeedback : transaction?.requesterGaveFeedback;
+  const isFeedbackRequired = transaction?.status === 'COMPLETED' && !hasGivenFeedback;
+
+  useEffect(() => {
+    setNavigationLocked(isFeedbackRequired ?? false);
+
+    // Cleanup function to unlock navigation when the component unmounts
+    return () => {
+      setNavigationLocked(false);
+    };
+  }, [isFeedbackRequired, setNavigationLocked]);
+
 
   if (isLoading) {
     return (
@@ -543,14 +550,11 @@ export default function TransactionPage() {
     );
   }
 
-  const isFulfiller = user?.uid === transaction.fulfillerId;
-  const isRequester = user?.uid === transaction.requesterId;
   const userRole = isFulfiller ? 'Lender' : isRequester ? 'Borrower' : 'Observer';
   const peerId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
   const peerRole = isFulfiller ? 'Borrower' : 'Lender';
 
   if (transaction.status === 'COMPLETED' || transaction.status === 'CANCELLED') {
-      const hasGivenFeedback = isFulfiller ? transaction.lenderGaveFeedback : transaction.requesterGaveFeedback;
       const peerHasGivenFeedback = isFulfiller ? transaction.requesterGaveFeedback : transaction.lenderGaveFeedback;
       const ratedUserId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
 
@@ -589,7 +593,7 @@ export default function TransactionPage() {
                      )}
                 </CardContent>
                 <CardFooter>
-                    {(transaction.status === 'CANCELLED' || (transaction.status === 'COMPLETED' && hasGivenFeedback)) && (
+                    {(transaction.status === 'CANCELLED' || hasGivenFeedback) && (
                         <Button className="w-full" onClick={() => router.push('/dashboard')}>Back to Dashboard</Button>
                     )}
                 </CardFooter>

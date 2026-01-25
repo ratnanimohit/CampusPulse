@@ -15,17 +15,22 @@ import { Settings, User, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
+import { useAtom } from 'jotai';
+import { navigationLockedAtom } from '@/lib/state/app-state';
 
 export function UserNav() {
   const { user } = useUser();
   const auth = useAuth();
   const router = useRouter();
+  const [navigationLocked] = useAtom(navigationLockedAtom);
+
 
   if (!user) {
     return null;
   }
   
   const handleSignOut = async () => {
+    // Disabled prop on DropdownMenuItem will prevent this from being called when locked.
     await auth.signOut();
     router.push('/');
   }
@@ -45,7 +50,7 @@ export function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full" disabled={navigationLocked}>
           <Avatar className="h-9 w-9">
             <AvatarImage src={user.photoURL || ''} alt={displayName} data-ai-hint="person avatar" />
             <AvatarFallback>{getInitials(displayName)}</AvatarFallback>
@@ -63,13 +68,13 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild disabled={navigationLocked}>
             <Link href="/profile">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild disabled={navigationLocked}>
              <Link href="/settings">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
@@ -77,7 +82,7 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
+        <DropdownMenuItem onClick={handleSignOut} disabled={navigationLocked}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sign out</span>
         </DropdownMenuItem>
