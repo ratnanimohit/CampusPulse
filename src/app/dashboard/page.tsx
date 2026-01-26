@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -35,7 +35,6 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
-import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 
 type ItemRequest = {
   id: string;
@@ -175,6 +174,8 @@ export default function Dashboard() {
     setIsClient(true);
   }, []);
 
+  const previousNearbyRequestIds = useRef<string[]>([]);
+
   // Effect to find nearby emergency requests
   useEffect(() => {
     if (!allEmergencyRequests || !user) return;
@@ -198,8 +199,20 @@ export default function Dashboard() {
             }
             return false;
         });
+
+        const currentNearbyIds = nearby.map(req => req.id);
+        const hasNewRequest = currentNearbyIds.some(id => !previousNearbyRequestIds.current.includes(id));
+
+        if (hasNewRequest) {
+          // Vibrate if the API is available
+          if (typeof window !== 'undefined' && navigator.vibrate) {
+            // A pattern to signify an emergency
+            navigator.vibrate([400, 100, 400]);
+          }
+        }
         
         setNearbyEmergencyRequests(nearby);
+        previousNearbyRequestIds.current = currentNearbyIds;
     };
 
     checkNearby();
@@ -544,3 +557,5 @@ export default function Dashboard() {
     </>
   );
 }
+
+    
