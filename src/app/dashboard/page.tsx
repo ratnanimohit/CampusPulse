@@ -178,29 +178,38 @@ export default function Dashboard() {
   const previousNearbyRequestIds = useRef<string[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // This effect initializes the AudioContext on the first user interaction
-  // to comply with browser autoplay policies.
+  // This effect initializes and resumes the AudioContext on the first user interaction.
   useEffect(() => {
-    const initializeAudio = () => {
+    const initializeAudio = async () => {
         if (typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext) && !audioContextRef.current) {
             try {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                audioContextRef.current = new AudioContext();
+                const context = new AudioContext();
+                audioContextRef.current = context;
+
+                // Resume the context if it's suspended, which is required by modern browsers.
+                if (context.state === 'suspended') {
+                  await context.resume();
+                }
             } catch(e) {
                 console.error("Could not initialize AudioContext", e);
             }
         }
     };
 
-    // Listen for the first click or touch to initialize audio.
-    window.addEventListener('click', initializeAudio, { once: true });
-    window.addEventListener('touchstart', initializeAudio, { once: true });
+    // Use a named function to be able to remove it.
+    const handleFirstInteraction = () => {
+        initializeAudio();
+        window.removeEventListener('click', handleFirstInteraction);
+        window.removeEventListener('touchstart', handleFirstInteraction);
+    }
+
+    window.addEventListener('click', handleFirstInteraction);
+    window.addEventListener('touchstart', handleFirstInteraction);
 
     return () => {
-        // Cleanup listeners just in case.
-        window.removeEventListener('click', initializeAudio);
-        window.removeEventListener('touchstart', initializeAudio);
-        // And close the audio context when the component unmounts.
+        window.removeEventListener('click', handleFirstInteraction);
+        window.removeEventListener('touchstart', handleFirstInteraction);
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close().catch(console.error);
         }
@@ -242,29 +251,24 @@ export default function Dashboard() {
             navigator.vibrate([500, 100, 500]);
           }
            // Play a sound using the resilient AudioContext
-          if (audioContextRef.current) {
-            const audioContext = audioContextRef.current;
-            if (audioContext.state === 'suspended') {
-              await audioContext.resume();
-            }
-
+          if (audioContextRef.current && audioContextRef.current.state === 'running') {
             try {
-              const oscillator = audioContext.createOscillator();
-              const gainNode = audioContext.createGain();
+              const oscillator = audioContextRef.current.createOscillator();
+              const gainNode = audioContextRef.current.createGain();
       
               oscillator.connect(gainNode);
-              gainNode.connect(audioContext.destination);
+              gainNode.connect(audioContextRef.current.destination);
       
               oscillator.type = 'sine';
-              gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+              gainNode.gain.setValueAtTime(0.3, audioContextRef.current.currentTime);
               
               // First tone (A5)
-              oscillator.frequency.setValueAtTime(880, audioContext.currentTime); 
+              oscillator.frequency.setValueAtTime(880, audioContextRef.current.currentTime); 
               // Second tone (C6)
-              oscillator.frequency.setValueAtTime(1046.50, audioContext.currentTime + 0.15); 
+              oscillator.frequency.setValueAtTime(1046.50, audioContextRef.current.currentTime + 0.15); 
       
               oscillator.start();
-              oscillator.stop(audioContext.currentTime + 0.3); // Play for 0.3 seconds
+              oscillator.stop(audioContextRef.current.currentTime + 0.3); // Play for 0.3 seconds
             } catch (e) {
                 console.error("Could not play notification sound", e);
             }
@@ -616,9 +620,3 @@ export default function Dashboard() {
     </>
   );
 }
-
-    
-
-    
-
-    
