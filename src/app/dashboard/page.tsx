@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
+import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 
 type ItemRequest = {
   id: string;
@@ -206,8 +207,28 @@ export default function Dashboard() {
         if (hasNewRequest) {
           // Vibrate if the API is available
           if (typeof window !== 'undefined' && navigator.vibrate) {
-            // A pattern to signify an emergency
-            navigator.vibrate([400, 100, 400]);
+            // A longer pattern to signify an emergency
+            navigator.vibrate([600, 150, 600]);
+          }
+           // Play a sound
+          if (typeof window !== 'undefined' && window.AudioContext) {
+            try {
+              const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const oscillator = audioContext.createOscillator();
+              const gainNode = audioContext.createGain();
+      
+              oscillator.connect(gainNode);
+              gainNode.connect(audioContext.destination);
+      
+              oscillator.type = 'sine';
+              oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A sharp, noticeable pitch
+              gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Keep volume reasonable
+      
+              oscillator.start();
+              oscillator.stop(audioContext.currentTime + 0.6); // Play for 0.6 seconds
+            } catch (e) {
+                console.error("Could not play notification sound", e);
+            }
           }
         }
         
@@ -236,9 +257,8 @@ export default function Dashboard() {
         requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
-        itemImageUrl: null,
         karma: 10, // Base karma is 10 for all transactions
-        status: 'HANDOVER_PENDING',
+        status: 'CREATED',
         handoverCode: handoverCode,
         handoverCodeHash: simpleHash(handoverCode),
         handoverVerified: false,
