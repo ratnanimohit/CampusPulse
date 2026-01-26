@@ -462,7 +462,7 @@ export default function TransactionPage() {
   const router = useRouter();
 
   const [isProcessing, setIsProcessing] = useState(false);
-  const hasApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY && process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY !== 'AIzaSyAWFXHOlTS-kfUxNmZ9qFySKcffO87-x50';
+  const hasApiKey = !!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const [, setNavigationLocked] = useAtom(navigationLockedAtom);
 
 
@@ -551,7 +551,7 @@ export default function TransactionPage() {
     );
   }
 
-  const userRole = isFulfiller ? 'Lender' : isRequester ? 'Borrower' : 'Observer';
+  const userRole = isFulfiller ? 'Lender' : 'Borrower';
   const peerId = isFulfiller ? transaction.requesterId : transaction.fulfillerId;
   const peerRole = isFulfiller ? 'Borrower' : 'Lender';
 
