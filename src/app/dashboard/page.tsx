@@ -35,6 +35,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
 import { getCurrentLocation, simpleHash, getDistance } from '@/lib/utils';
+import { generateImageFromPrompt } from '@/ai/flows/generate-image-from-prompt';
 
 type ItemRequest = {
   id: string;
@@ -215,12 +216,14 @@ export default function Dashboard() {
       // 1. Create the transaction document
       const transactionDocRef = doc(collection(firestore, 'transactions'));
       const handoverCode = Math.floor(1000 + Math.random() * 9000).toString();
+      
       const transactionData = {
         id: transactionDocRef.id,
         fulfillerId: user.uid,
         requesterId: request.requesterId,
         itemId: request.id,
         itemName: request.itemName,
+        itemImageUrl: null,
         karma: 10, // Base karma is 10 for all transactions
         status: 'HANDOVER_PENDING',
         handoverCode: handoverCode,
@@ -446,10 +449,10 @@ export default function Dashboard() {
                       <TableCell>
                         <Badge variant="outline">{tx.status.replace(/_/g, ' ')}</Badge>
                       </TableCell>
-                      <TableCell className="text-right text-green-600 font-medium">
+                      <TableCell className={`text-right font-medium ${tx.status === 'COMPLETED' ? 'text-green-600' : 'text-muted-foreground'}`}>
                          {tx.status === 'COMPLETED'
                             ? (tx.fulfillerId === user?.uid ? tx.lenderAwardedKarma : tx.requesterAwardedKarma) ?? 0
-                            : tx.karma
+                            : tx.status === 'CANCELLED' ? 0 : tx.karma
                          }
                       </TableCell>
                     </TableRow>
