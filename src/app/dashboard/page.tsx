@@ -181,43 +181,28 @@ export default function Dashboard() {
   // This effect initializes the AudioContext on the first user interaction
   // to comply with browser autoplay policies.
   useEffect(() => {
-    const initializeAudio = async () => {
+    const initializeAudio = () => {
         if (typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext) && !audioContextRef.current) {
             try {
                 const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-                const context = new AudioContext();
-                
-                // If the context is suspended, it must be resumed in a user gesture.
-                if (context.state === 'suspended') {
-                    await context.resume();
-                }
-
-                // This is a common trick to "unlock" the AudioContext in some browsers.
-                // It plays a tiny, silent sound buffer.
-                const buffer = context.createBuffer(1, 1, 22050); // 1 frame, 1 channel, 22050Hz sample rate
-                const source = context.createBufferSource();
-                source.buffer = buffer;
-                source.connect(context.destination);
-                source.start(); // Play the silent buffer immediately.
-                
-                audioContextRef.current = context;
+                audioContextRef.current = new AudioContext();
             } catch(e) {
                 console.error("Could not initialize AudioContext", e);
             }
         }
     };
 
-    // Listen for the first click or touch to initialize audio. Use { once: true } so it only runs once.
+    // Listen for the first click or touch to initialize audio.
     window.addEventListener('click', initializeAudio, { once: true });
     window.addEventListener('touchstart', initializeAudio, { once: true });
 
     return () => {
-        // Cleanup listeners just in case, though {once: true} should handle it.
+        // Cleanup listeners just in case.
         window.removeEventListener('click', initializeAudio);
         window.removeEventListener('touchstart', initializeAudio);
         // And close the audio context when the component unmounts.
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-            audioContextRef.current.close();
+            audioContextRef.current.close().catch(console.error);
         }
     };
   }, []);
@@ -253,13 +238,17 @@ export default function Dashboard() {
         if (hasNewRequest) {
           // Vibrate if the API is available
           if (typeof window !== 'undefined' && navigator.vibrate) {
-            // A longer pattern to signify an emergency
-            navigator.vibrate([600, 150, 600]);
+            // A more distinct pattern to signify an emergency
+            navigator.vibrate([500, 100, 500]);
           }
            // Play a sound using the resilient AudioContext
-          if (audioContextRef.current && audioContextRef.current.state === 'running') {
+          if (audioContextRef.current) {
+            const audioContext = audioContextRef.current;
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+            }
+
             try {
-              const audioContext = audioContextRef.current;
               const oscillator = audioContext.createOscillator();
               const gainNode = audioContext.createGain();
       
@@ -267,11 +256,15 @@ export default function Dashboard() {
               gainNode.connect(audioContext.destination);
       
               oscillator.type = 'sine';
-              oscillator.frequency.setValueAtTime(880, audioContext.currentTime); // A sharp, noticeable pitch
-              gainNode.gain.setValueAtTime(0.3, audioContext.currentTime); // Keep volume reasonable
+              gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+              
+              // First tone (A5)
+              oscillator.frequency.setValueAtTime(880, audioContext.currentTime); 
+              // Second tone (C6)
+              oscillator.frequency.setValueAtTime(1046.50, audioContext.currentTime + 0.15); 
       
               oscillator.start();
-              oscillator.stop(audioContext.currentTime + 0.6); // Play for 0.6 seconds
+              oscillator.stop(audioContext.currentTime + 0.3); // Play for 0.3 seconds
             } catch (e) {
                 console.error("Could not play notification sound", e);
             }
@@ -623,6 +616,8 @@ export default function Dashboard() {
     </>
   );
 }
+
+    
 
     
 
