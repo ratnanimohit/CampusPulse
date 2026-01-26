@@ -207,7 +207,6 @@ export default function Dashboard() {
         if (hasNewRequest) {
           // Vibrate if the API is available
           if (typeof window !== 'undefined' && navigator.vibrate) {
-            // A more distinct pattern to signify an emergency
             navigator.vibrate([500, 100, 500]);
           }
         }
