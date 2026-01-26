@@ -181,22 +181,24 @@ export default function Dashboard() {
   // This effect initializes the AudioContext on the first user interaction
   // to comply with browser autoplay policies.
   useEffect(() => {
-    const initializeAudio = () => {
+    const initializeAudio = async () => {
+        // The listener should only run once.
+        window.removeEventListener('click', initializeAudio);
+        window.removeEventListener('touchstart', initializeAudio);
+        
         if (typeof window !== 'undefined' && window.AudioContext && !audioContextRef.current) {
             try {
                 const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-                // Resume the context if it's suspended, which is common before a user gesture.
+                // Browsers require a user gesture to start an AudioContext.
+                // We resume it here, inside the event handler for the click/touch.
                 if (context.state === 'suspended') {
-                    context.resume();
+                    await context.resume();
                 }
                 audioContextRef.current = context;
             } catch(e) {
-                console.error("Could not initialize AudioContext", e);
+                console.error("Could not initialize and resume AudioContext", e);
             }
         }
-        // Once initialized, we don't need the listener anymore.
-        window.removeEventListener('click', initializeAudio);
-        window.removeEventListener('touchstart', initializeAudio);
     };
 
     // Listen for the first click or touch to initialize audio.
@@ -204,9 +206,10 @@ export default function Dashboard() {
     window.addEventListener('touchstart', initializeAudio);
 
     return () => {
+        // Cleanup listeners
         window.removeEventListener('click', initializeAudio);
         window.removeEventListener('touchstart', initializeAudio);
-        // Optional: close the audio context when the component unmounts
+        // And close the audio context when the component unmounts.
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
             audioContextRef.current.close();
         }
