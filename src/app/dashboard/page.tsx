@@ -182,31 +182,37 @@ export default function Dashboard() {
   // to comply with browser autoplay policies.
   useEffect(() => {
     const initializeAudio = async () => {
-        // The listener should only run once.
-        window.removeEventListener('click', initializeAudio);
-        window.removeEventListener('touchstart', initializeAudio);
-        
-        if (typeof window !== 'undefined' && window.AudioContext && !audioContextRef.current) {
+        if (typeof window !== 'undefined' && (window.AudioContext || (window as any).webkitAudioContext) && !audioContextRef.current) {
             try {
-                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-                // Browsers require a user gesture to start an AudioContext.
-                // We resume it here, inside the event handler for the click/touch.
+                const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+                const context = new AudioContext();
+                
+                // If the context is suspended, it must be resumed in a user gesture.
                 if (context.state === 'suspended') {
                     await context.resume();
                 }
+
+                // This is a common trick to "unlock" the AudioContext in some browsers.
+                // It plays a tiny, silent sound buffer.
+                const buffer = context.createBuffer(1, 1, 22050); // 1 frame, 1 channel, 22050Hz sample rate
+                const source = context.createBufferSource();
+                source.buffer = buffer;
+                source.connect(context.destination);
+                source.start(); // Play the silent buffer immediately.
+                
                 audioContextRef.current = context;
             } catch(e) {
-                console.error("Could not initialize and resume AudioContext", e);
+                console.error("Could not initialize AudioContext", e);
             }
         }
     };
 
-    // Listen for the first click or touch to initialize audio.
-    window.addEventListener('click', initializeAudio);
-    window.addEventListener('touchstart', initializeAudio);
+    // Listen for the first click or touch to initialize audio. Use { once: true } so it only runs once.
+    window.addEventListener('click', initializeAudio, { once: true });
+    window.addEventListener('touchstart', initializeAudio, { once: true });
 
     return () => {
-        // Cleanup listeners
+        // Cleanup listeners just in case, though {once: true} should handle it.
         window.removeEventListener('click', initializeAudio);
         window.removeEventListener('touchstart', initializeAudio);
         // And close the audio context when the component unmounts.
@@ -617,5 +623,7 @@ export default function Dashboard() {
     </>
   );
 }
+
+    
 
     
