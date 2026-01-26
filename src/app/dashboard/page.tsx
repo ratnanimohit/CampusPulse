@@ -176,6 +176,43 @@ export default function Dashboard() {
   }, []);
 
   const previousNearbyRequestIds = useRef<string[]>([]);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // This effect initializes the AudioContext on the first user interaction
+  // to comply with browser autoplay policies.
+  useEffect(() => {
+    const initializeAudio = () => {
+        if (typeof window !== 'undefined' && window.AudioContext && !audioContextRef.current) {
+            try {
+                const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+                // Resume the context if it's suspended, which is common before a user gesture.
+                if (context.state === 'suspended') {
+                    context.resume();
+                }
+                audioContextRef.current = context;
+            } catch(e) {
+                console.error("Could not initialize AudioContext", e);
+            }
+        }
+        // Once initialized, we don't need the listener anymore.
+        window.removeEventListener('click', initializeAudio);
+        window.removeEventListener('touchstart', initializeAudio);
+    };
+
+    // Listen for the first click or touch to initialize audio.
+    window.addEventListener('click', initializeAudio);
+    window.addEventListener('touchstart', initializeAudio);
+
+    return () => {
+        window.removeEventListener('click', initializeAudio);
+        window.removeEventListener('touchstart', initializeAudio);
+        // Optional: close the audio context when the component unmounts
+        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
+            audioContextRef.current.close();
+        }
+    };
+  }, []);
+
 
   // Effect to find nearby emergency requests
   useEffect(() => {
@@ -210,10 +247,10 @@ export default function Dashboard() {
             // A longer pattern to signify an emergency
             navigator.vibrate([600, 150, 600]);
           }
-           // Play a sound
-          if (typeof window !== 'undefined' && window.AudioContext) {
+           // Play a sound using the resilient AudioContext
+          if (audioContextRef.current && audioContextRef.current.state === 'running') {
             try {
-              const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+              const audioContext = audioContextRef.current;
               const oscillator = audioContext.createOscillator();
               const gainNode = audioContext.createGain();
       
