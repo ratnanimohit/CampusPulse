@@ -69,7 +69,7 @@ export default function NearbyLockersPage() {
                 const nearbyUsers = allProfiles.filter(profile => {
                     if (profile.id === user.uid || !profile.location) return false;
                     const distance = getDistance(userLocation.lat, userLocation.lng, profile.location.lat, profile.location.lng);
-                    return distance <= 50;
+                    return distance <= 500;
                 });
                 
                 const lockers: NearbyLocker[] = nearbyUsers.map(owner => {
@@ -105,7 +105,7 @@ export default function NearbyLockersPage() {
                     <Radar className="h-8 w-8" />
                     Nearby Lockers
                 </h1>
-                <p className="text-muted-foreground">Browse items available from users within 50 meters of you.</p>
+                <p className="text-muted-foreground">Browse items available from users within 500 meters of you.</p>
             </div>
 
             {isLoading ? (
@@ -171,7 +171,7 @@ export default function NearbyLockersPage() {
                             No Lockers Found Nearby
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            We couldn't find any available items within 50 meters of your location.
+                            We couldn't find any available items within 500 meters of your location.
                         </p>
                     </div>
                 </Card>
