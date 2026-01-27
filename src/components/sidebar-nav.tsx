@@ -106,7 +106,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
       <nav
         className={cn(
           'grid items-start gap-1 p-2 text-sm font-medium lg:px-4 flex-grow',
-          isMobile && 'grid-rows-auto grid-flow-row gap-4 pt-4',
+          isMobile && 'grid-rows-auto grid-flow-row gap-1 p-2',
           className
         )}
         {...props}
