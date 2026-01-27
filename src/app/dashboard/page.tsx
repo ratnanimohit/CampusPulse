@@ -31,6 +31,7 @@ import {
   or,
   writeBatch,
   doc,
+  updateDoc,
 } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { MapModal } from '@/components/map-modal';
@@ -177,6 +178,24 @@ export default function Dashboard() {
 
   const previousNearbyRequestIds = useRef<string[]>([]);
   
+  // Effect to update user's location on profile
+  useEffect(() => {
+    const updateUserLocation = async () => {
+        if (!user || !firestore) return;
+        try {
+            const location = await getCurrentLocation();
+            if (location) {
+                const userProfileRef = doc(firestore, 'userProfiles', user.uid);
+                await updateDoc(userProfileRef, { location });
+            }
+        } catch (error) {
+            console.warn("Could not update user location:", error);
+        }
+    };
+
+    updateUserLocation();
+  }, [user, firestore]);
+
   // Effect to find nearby emergency requests
   useEffect(() => {
     if (!allEmergencyRequests || !user) return;
@@ -208,7 +227,7 @@ export default function Dashboard() {
                 setNearbyEmergencyRequests(nearby);
 
                 if (typeof window !== 'undefined' && navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200]);
+                    navigator.vibrate(200);
                 }
             } else if (currentNearbyIds.length !== previousNearbyRequestIds.current.length) {
                 // If a request was removed, just update the state without notification

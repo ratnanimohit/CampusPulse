@@ -12,6 +12,7 @@ import {
   FileQuestion,
   LogOut,
   Repeat,
+  Radar,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -58,6 +59,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
   
   const navLinks = [
     { href: '/dashboard', icon: Home, label: 'Dashboard' },
+    { href: '/nearby-lockers', icon: Radar, label: 'Nearby Lockers' },
     { href: '/locker', icon: Package, label: 'My Locker' },
     { href: '/requests', icon: PlusCircle, label: 'New Request' },
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },

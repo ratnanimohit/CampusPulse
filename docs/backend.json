@@ -38,6 +38,21 @@
         "ratingsCount": {
           "type": "number",
           "description": "The total number of ratings the user has received."
+        },
+        "location": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The last known geographical coordinates of the user.",
+          "properties": {
+            "lat": {
+              "type": "number"
+            },
+            "lng": {
+              "type": "number"
+            }
+          }
         }
       },
       "required": [

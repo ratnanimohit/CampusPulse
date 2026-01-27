@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser, useFirestore } from '@/firebase';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getCurrentLocation } from '@/lib/utils';
@@ -49,16 +50,24 @@ export default function RequestsPage() {
   const router = useRouter();
   const { user } = useUser();
   const firestore = useFirestore();
+  const searchParams = useSearchParams();
+  const itemNameFromQuery = searchParams.get('itemName');
 
   const form = useForm<RequestFormValues>({
     resolver: zodResolver(requestFormSchema),
     defaultValues: {
-      itemName: '',
+      itemName: itemNameFromQuery || '',
       reason: '',
       urgency: '',
       requiredBy: '',
     },
   });
+
+  useEffect(() => {
+    if (itemNameFromQuery) {
+        form.setValue('itemName', itemNameFromQuery);
+    }
+  }, [itemNameFromQuery, form]);
 
   async function onSubmit(data: RequestFormValues) {
     if (!user || !firestore) {
