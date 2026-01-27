@@ -3,22 +3,46 @@ import { cn } from "@/lib/utils"
 
 export const Logo = ({ className, ...props }: React.SVGProps<SVGSVGElement>) => (
   <svg
+    viewBox="0 0 32 32"
+    fill="none"
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 256 256"
-    width="24"
-    height="24"
     className={cn("h-6 w-6", className)}
     {...props}
   >
     <defs>
-      <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" style={{ stopColor: 'hsl(var(--primary))', stopOpacity: 1 }} />
-        <stop offset="100%" style={{ stopColor: 'hsl(300, 87%, 60%)', stopOpacity: 1 }} />
+      <linearGradient id="logoGradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+        <stop stopColor="hsl(var(--primary))"/>
+        <stop offset="1" stopColor="hsl(300, 87%, 60%)" />
       </linearGradient>
     </defs>
+    <rect x="3" y="3" width="26" height="26" rx="6" stroke="url(#logoGradient)" strokeWidth="3" />
     <path 
-      fill="url(#logoGradient)" 
-      d="M128,24A104,104,0,1,0,232,128,104.1,104.1,0,0,0,128,24Zm0,192a88,88,0,1,1,88-88A88.1,88.1,0,0,1,128,216ZM184.2,160.8a8,8,0,0,1-10.6,1.4L152,148.1l-14.8,25.8a8,8,0,0,1-13.8-8l18.5-32.3a7.9,7.9,0,0,1,10.1-3.3L176,140.7,182.6,150A8,8,0,0,1,184.2,160.8ZM88,80a8,8,0,0,1,8-8h56a8,8,0,0,1,0,16H96A8,8,0,0,1,88,80Z"
+        d="M10 15L14 19L18 15"
+        stroke="url(#logoGradient)" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+    />
+    <path 
+        d="M10 15V20.5C10 21.3284 10.6716 22 11.5 22H12.5"
+        stroke="url(#logoGradient)" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+    />
+    <path 
+        d="M18 15V20.5C18 21.3284 17.3284 22 16.5 22H15.5"
+        stroke="url(#logoGradient)" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+    />
+    <path 
+        d="M10 15L13 12M18 15L15 12"
+        stroke="url(#logoGradient)" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
     />
   </svg>
 )
