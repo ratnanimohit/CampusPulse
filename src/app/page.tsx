@@ -34,14 +34,14 @@ import { setDoc, doc } from 'firebase/firestore';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 
-const allowedEmailValidator = (email: string) => email.endsWith('@gla.ac.in') || email.endsWith('@gmail.com');
+const allowedEmailValidator = (email: string) => email.endsWith('@gla.ac.in');
 
 const loginSchema = z.object({
   email: z
     .string()
     .email('Invalid email address.')
     .refine(allowedEmailValidator, {
-      message: "Email must be a '@gla.ac.in' or '@gmail.com' address.",
+      message: "Email must be a '@gla.ac.in' address.",
     }),
   password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });
@@ -53,7 +53,7 @@ const signupSchema = z.object({
         .string()
         .email('Invalid email address.')
         .refine(allowedEmailValidator, {
-          message: "Email must be a '@gla.ac.in' or '@gmail.com' address.",
+          message: "Email must be a '@gla.ac.in' address.",
         }),
     password: z.string().min(6, 'Password must be at least 6 characters long.'),
 });

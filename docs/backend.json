@@ -12,7 +12,7 @@
         },
         "email": {
           "type": "string",
-          "description": "User's email address. Must be a @gla.ac.in or @gmail.com domain.",
+          "description": "User's email address. Must be a @gla.ac.in domain.",
           "format": "email"
         },
         "firstName": {
