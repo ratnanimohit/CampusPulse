@@ -190,14 +190,24 @@ export default function LoginPage() {
           ratingsCount: 0,
         });
 
-        await sendEmailVerification(newUser);
+        try {
+            await sendEmailVerification(newUser);
+            toast({
+              title: 'Verification Email Sent!',
+              description: 'Please check your inbox (and spam folder) and click the link to verify your account. Then you can log in.',
+              duration: 10000,
+            });
+        } catch (emailError) {
+             console.error("Failed to send verification email:", emailError);
+             toast({
+                variant: 'destructive',
+                title: 'Could Not Send Verification Email',
+                description: 'Your account was created, but we failed to send a verification email. Please try again or contact support.',
+                duration: 15000,
+            });
+        }
+        
         await auth.signOut();
-
-        toast({
-          title: 'Verification Email Sent!',
-          description: 'Please check your inbox and click the link to verify your account. Then you can log in.',
-          duration: 10000,
-        });
 
         setFormType('login');
         form.reset();
