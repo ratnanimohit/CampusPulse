@@ -227,7 +227,7 @@ export default function Dashboard() {
                 setNearbyEmergencyRequests(nearby);
 
                 if (typeof window !== 'undefined' && navigator.vibrate) {
-                    navigator.vibrate(200);
+                    navigator.vibrate([500, 200, 500]);
                 }
             } else if (currentNearbyIds.length !== previousNearbyRequestIds.current.length) {
                 // If a request was removed, just update the state without notification
@@ -585,5 +585,3 @@ export default function Dashboard() {
     </>
   );
 }
-
-    
