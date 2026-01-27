@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/sidebar';
 import { Header } from '@/components/header';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
+import { Footer } from '@/components/Footer';
 
 export function AppContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -43,6 +44,7 @@ export function AppContent({ children }: { children: React.ReactNode }) {
         <main className="flex-1 p-4 md:p-6 lg:p-8 bg-background">
           {children}
         </main>
+        <Footer />
       </div>
     </div>
   );
