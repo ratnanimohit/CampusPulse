@@ -182,40 +182,50 @@ export default function Dashboard() {
     if (!allEmergencyRequests || !user) return;
 
     const checkNearby = async () => {
-        const userLocation = await getCurrentLocation();
-        if (!userLocation) return;
+        try {
+            const userLocation = await getCurrentLocation();
+            if (!userLocation) return;
 
-        const nearby = allEmergencyRequests.filter(req => {
-            // Don't show notifications for user's own requests
-            if (req.requesterId === user.uid) return false;
+            const nearby = allEmergencyRequests.filter(req => {
+                if (req.requesterId === user.uid) return false;
 
-            if (req.location) {
-                const distance = getDistance(
-                    userLocation.lat,
-                    userLocation.lng,
-                    req.location.lat,
-                    req.location.lng
-                );
-                return distance <= 500; // 500 meters
+                if (req.location) {
+                    const distance = getDistance(
+                        userLocation.lat,
+                        userLocation.lng,
+                        req.location.lat,
+                        req.location.lng
+                    );
+                    return distance <= 500; // 500 meters
+                }
+                return false;
+            });
+
+            const currentNearbyIds = nearby.map(req => req.id);
+            const newRequestExists = currentNearbyIds.some(id => !previousNearbyRequestIds.current.includes(id));
+            
+            if (newRequestExists) {
+                setNearbyEmergencyRequests(nearby);
+
+                if (typeof window !== 'undefined' && navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+            } else if (currentNearbyIds.length !== previousNearbyRequestIds.current.length) {
+                // If a request was removed, just update the state without notification
+                setNearbyEmergencyRequests(nearby);
             }
-            return false;
-        });
 
-        const currentNearbyIds = nearby.map(req => req.id);
-        const hasNewRequest = currentNearbyIds.some(id => !previousNearbyRequestIds.current.includes(id));
+            previousNearbyRequestIds.current = currentNearbyIds;
 
-        if (hasNewRequest) {
-          // Vibrate if the API is available
-          if (typeof window !== 'undefined' && navigator.vibrate) {
-            navigator.vibrate([500, 100, 500]);
-          }
+        } catch (error) {
+            console.error("Error checking for nearby requests:", error);
         }
-        
-        setNearbyEmergencyRequests(nearby);
-        previousNearbyRequestIds.current = currentNearbyIds;
     };
 
-    checkNearby();
+    const intervalId = setInterval(checkNearby, 5000); // Check every 5 seconds
+    checkNearby(); // Initial check
+
+    return () => clearInterval(intervalId);
   }, [allEmergencyRequests, user]);
 
   const fulfillRequest = async (request: ItemRequest) => {
@@ -237,7 +247,7 @@ export default function Dashboard() {
         itemId: request.id,
         itemName: request.itemName,
         karma: 10, // Base karma is 10 for all transactions
-        status: 'CREATED',
+        status: 'HANDOVER_PENDING',
         handoverCode: handoverCode,
         handoverCodeHash: simpleHash(handoverCode),
         handoverVerified: false,
