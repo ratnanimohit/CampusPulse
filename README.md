@@ -24,7 +24,7 @@ CampusPulse is a hyperlocal web solution that transforms a university campus int
 - **State Management**: Jotai, React Context
 
 Application Deplyement Link
-- 
+- https://campus-pulse-two.vercel.app
 
 🏗️ Architecture Overview
 CampusPulse follows a component-driven, real-time architecture to ensure a responsive user experience:
