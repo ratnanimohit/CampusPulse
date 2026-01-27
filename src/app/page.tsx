@@ -193,8 +193,8 @@ export default function LoginPage() {
         try {
             await sendEmailVerification(newUser);
             toast({
-              title: 'Verification Email Sent!',
-              description: 'Please check your inbox (and spam folder) and click the link to verify your account. Then you can log in.',
+              title: 'Account Created!',
+              description: 'Please check your inbox (and spam folder) for a verification link. Once verified, you can sign in.',
               duration: 10000,
             });
         } catch (emailError) {
@@ -207,8 +207,6 @@ export default function LoginPage() {
             });
         }
         
-        await auth.signOut();
-
         setFormType('login');
         form.reset();
       } else if (data.formType === 'forgotPassword') {
