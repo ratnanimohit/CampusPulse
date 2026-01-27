@@ -42,7 +42,7 @@ export default function SettingsPage() {
     const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
     const backgroundColors = [
-        { name: 'Default', value: '147 44% 91%' },
+        { name: 'Mint', value: '148 43% 91%' },
         { name: 'Zinc', value: '240 5% 96.1%' },
         { name: 'Rose', value: '346.8 77.2% 96.3%' },
         { name: 'Blue', value: '221.2 83.2% 96.5%' },
