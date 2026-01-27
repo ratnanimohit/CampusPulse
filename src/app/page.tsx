@@ -169,7 +169,6 @@ export default function LoginPage() {
           title: 'Login Successful!',
           description: "Welcome back to CampusPulse!",
         });
-        router.push('/dashboard');
       } else if (data.formType === 'signup') {
         const signupData = data as z.infer<typeof signupSchema>;
         const userCredential = await createUserWithEmailAndPassword(
@@ -191,12 +190,14 @@ export default function LoginPage() {
         });
 
         try {
-            await sendEmailVerification(newUser);
-            toast({
-              title: 'Account Created!',
-              description: 'Please check your inbox (and spam folder) for a verification link. Once verified, you can sign in.',
-              duration: 10000,
-            });
+          await sendEmailVerification(newUser);
+          toast({
+            title: 'Account Created!',
+            description: 'Please check your inbox (and spam folder) for a verification link. Once verified, you can sign in.',
+            duration: 10000,
+          });
+          // Sign the user out so they have to verify their email before logging in.
+          await auth.signOut();
         } catch (emailError) {
              console.error("Failed to send verification email:", emailError);
              toast({
