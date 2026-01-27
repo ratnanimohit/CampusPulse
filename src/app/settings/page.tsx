@@ -11,19 +11,21 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth } from '@/fireb
 import { useToast } from '@/hooks/use-toast';
 import { doc, updateDoc } from 'firebase/firestore';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { cn } from '@/lib/utils';
 
 type UserProfile = {
     firstName: string;
     lastName: string;
 };
 
-
 export default function SettingsPage() {
     const { user } = useUser();
     const firestore = useFirestore();
     const auth = useAuth();
     const { toast } = useToast();
+    const { theme, setTheme } = useTheme();
     
     const [name, setName] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -39,16 +41,25 @@ export default function SettingsPage() {
     );
     const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
+    const backgroundColors = [
+        { name: 'Default', value: '147 44% 91%' },
+        { name: 'Zinc', value: '240 5% 96.1%' },
+        { name: 'Rose', value: '346.8 77.2% 96.3%' },
+        { name: 'Blue', value: '221.2 83.2% 96.5%' },
+    ];
+    
+    const [currentBg, setCurrentBg] = useState(backgroundColors[0].value);
 
     useEffect(() => {
         setIsClient(true);
         const savedSettings = localStorage.getItem('userSettings');
         if (savedSettings) {
             try {
-                const { name, emailNotifications, pushNotifications } = JSON.parse(savedSettings);
+                const { name, emailNotifications, pushNotifications, backgroundColor } = JSON.parse(savedSettings);
                 if (name) setName(name);
                 if (emailNotifications !== undefined) setEmailNotifications(emailNotifications);
                 if (pushNotifications !== undefined) setPushNotifications(pushNotifications);
+                if (backgroundColor) setCurrentBg(backgroundColor);
             } catch (e) {
                 // ignore parsing errors
             }
@@ -63,10 +74,20 @@ export default function SettingsPage() {
 
     useEffect(() => {
         if (isClient) {
-            const settings = { name, emailNotifications, pushNotifications };
+            const settings = { name, emailNotifications, pushNotifications, backgroundColor: currentBg };
             localStorage.setItem('userSettings', JSON.stringify(settings));
         }
-    }, [name, emailNotifications, pushNotifications, isClient]);
+    }, [name, emailNotifications, pushNotifications, isClient, currentBg]);
+    
+    useEffect(() => {
+      if (isClient) {
+        if (theme === 'light') {
+          document.documentElement.style.setProperty('--background', currentBg);
+        } else {
+          document.documentElement.style.removeProperty('--background');
+        }
+      }
+    }, [isClient, theme, currentBg]);
 
     const handleSaveChanges = async () => {
         setIsSaving(true);
@@ -155,6 +176,51 @@ export default function SettingsPage() {
                      <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input id="email" value={user?.email || ''} disabled />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Appearance</CardTitle>
+                    <CardDescription>Customize the look and feel of the app.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label htmlFor="theme-switcher">Theme</Label>
+                            <p className="text-sm text-muted-foreground">Toggle between light and dark mode.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <Sun className="h-5 w-5" />
+                           <Switch
+                                id="theme-switcher"
+                                checked={theme === 'dark'}
+                                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
+                            />
+                           <Moon className="h-5 w-5" />
+                        </div>
+                    </div>
+                     <Separator/>
+                     <div>
+                        <Label>Background Color (Light Mode)</Label>
+                        <p className="text-sm text-muted-foreground pb-2">Select a background color for the light theme.</p>
+                        <div className="flex gap-2">
+                            {backgroundColors.map(color => (
+                                <button
+                                    key={color.name}
+                                    onClick={() => setCurrentBg(color.value)}
+                                    disabled={theme === 'dark'}
+                                    className={cn(
+                                        "h-8 w-8 rounded-full border-2 transition-all",
+                                        currentBg === color.value && theme === 'light' ? "ring-2 ring-ring ring-offset-2 ring-offset-background" : "border-transparent",
+                                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                                    )}
+                                    style={{ backgroundColor: `hsl(${color.value})`}}
+                                    aria-label={`Set background to ${color.name}`}
+                                />
+                            ))}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
