@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import { getCurrentLocation, getDistance } from '@/lib/utils';
+import { collection, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
+import { getCurrentLocation, getDistance, simpleHash } from '@/lib/utils';
 import { Loader2, User, FileX, Radar } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import Image from 'next/image';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useToast } from '@/hooks/use-toast';
 
 type UserProfile = {
     id: string;
@@ -37,9 +38,13 @@ type NearbyLocker = {
 export default function NearbyLockersPage() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const router = useRouter();
+    const { toast } = useToast();
+
     const [nearbyLockers, setNearbyLockers] = useState<NearbyLocker[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isRequesting, setIsRequesting] = useState<string | null>(null); // Track requesting item by ID
 
     const profilesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'userProfiles') : null, [firestore]);
     const { data: allProfiles, isLoading: isLoadingProfiles } = useCollection<UserProfile>(profilesQuery);
@@ -91,6 +96,71 @@ export default function NearbyLockersPage() {
 
         findNearbyLockers();
     }, [allProfiles, allListings, user, isLoadingProfiles, isLoadingListings]);
+
+    const handleRequestItem = async (item: ItemListing, owner: UserProfile) => {
+        if (!user || !firestore) {
+            toast({ variant: 'destructive', title: 'You must be logged in to request an item.' });
+            return;
+        }
+
+        setIsRequesting(item.id);
+        try {
+            const requesterLocation = await getCurrentLocation();
+            const batch = writeBatch(firestore);
+
+            // 1. Create the new transaction document
+            const transactionDocRef = doc(collection(firestore, 'transactions'));
+            const handoverCode = Math.floor(1000 + Math.random() * 9000).toString();
+
+            const transactionData = {
+                id: transactionDocRef.id,
+                fulfillerId: item.ownerId,
+                requesterId: user.uid,
+                itemId: item.id, // The ID of the item listing being requested
+                itemName: item.name,
+                itemImageUrl: item.imageUrl,
+                karma: item.karma,
+                status: 'HANDOVER_PENDING',
+                handoverCode: handoverCode,
+                handoverCodeHash: simpleHash(handoverCode),
+                handoverVerified: false,
+                returnCode: null,
+                returnCodeHash: null,
+                returnVerified: false,
+                createdAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+                ...(requesterLocation && { requesterLocation: requesterLocation }),
+                ...(owner.location && { fulfillerLocation: owner.location }),
+                lenderGaveFeedback: false,
+                requesterGaveFeedback: false,
+            };
+            batch.set(transactionDocRef, transactionData);
+
+            // 2. Mark the item listing as unavailable
+            const itemDocRef = doc(firestore, 'itemListings', item.id);
+            batch.update(itemDocRef, { available: false });
+
+            await batch.commit();
+
+            toast({
+                title: 'Request Sent!',
+                description: `Your request for ${item.name} has been sent. Redirecting to transaction...`,
+            });
+            
+            router.push(`/transaction/${transactionDocRef.id}`);
+
+        } catch (error) {
+            console.error("Error requesting item:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Request Failed',
+                description: (error as Error).message || 'Could not create the transaction.',
+            });
+            setIsRequesting(null);
+        }
+        // No finally block to reset isRequesting, because we navigate away on success.
+        // It's reset on error.
+    };
     
     const getInitials = (firstName?: string, lastName?: string) => {
         if (firstName && lastName) return `${firstName[0]}${lastName[0]}`;
@@ -153,8 +223,14 @@ export default function NearbyLockersPage() {
                                             <CardDescription>{item.karma} Karma</CardDescription>
                                         </CardContent>
                                         <CardFooter>
-                                             <Button asChild className="w-full" size="sm">
-                                                <Link href={`/requests?itemName=${encodeURIComponent(item.name)}`}>Request Item</Link>
+                                             <Button 
+                                                className="w-full" 
+                                                size="sm"
+                                                onClick={() => handleRequestItem(item, owner)}
+                                                disabled={isRequesting === item.id}
+                                             >
+                                                {isRequesting === item.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                                Request Item
                                             </Button>
                                         </CardFooter>
                                     </Card>
