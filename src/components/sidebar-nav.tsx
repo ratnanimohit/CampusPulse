@@ -13,6 +13,7 @@ import {
   LogOut,
   Repeat,
   Radar,
+  IndianRupee,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -65,6 +66,7 @@ export function SidebarNav({ className, isMobile = false, ...props }: SidebarNav
     { href: '/my-requests', icon: FileQuestion, label: 'My Requests' },
     { href: '/transactions', icon: Repeat, label: 'Active Transactions' },
     { href: '/history', icon: History, label: 'History' },
+    { href: '/withdraw', icon: IndianRupee, label: 'Withdraw' },
     { href: user ? `/profile/${user.uid}` : '/profile', icon: Users, label: 'Profile' },
     { href: '/settings', icon: Settings, label: 'Settings' },
   ];
