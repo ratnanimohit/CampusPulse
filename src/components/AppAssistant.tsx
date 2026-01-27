@@ -21,7 +21,7 @@ export function AppAssistant() {
     const [messages, setMessages] = useState<Message[]>([
         {
             role: 'assistant',
-            content: "Hi! I'm your CampusPulse assistant. How can I help you navigate the app or answer your questions?",
+            content: "Hi! I'm AskIt. How can I help you navigate the app or answer your questions?",
         },
     ]);
     const [input, setInput] = useState('');
@@ -77,7 +77,7 @@ export function AppAssistant() {
             <PopoverContent side="top" align="end" className="w-80 md:w-96 p-0 mr-4 mb-2 rounded-xl shadow-2xl">
                 <div className="flex flex-col h-[60vh] max-h-[500px]">
                     <div className="flex items-center justify-between p-4 border-b">
-                        <h3 className="font-semibold font-headline">CampusPulse Assistant</h3>
+                        <h3 className="font-semibold font-headline">AskIt</h3>
                          <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="h-6 w-6">
                             <X className="h-4 w-4" />
                          </Button>
