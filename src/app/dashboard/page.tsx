@@ -241,7 +241,7 @@ export default function Dashboard() {
         }
     };
 
-    const intervalId = setInterval(checkNearby, 5000); // Check every 5 seconds
+    const intervalId = setInterval(checkNearby, 3000); // Check every 3 seconds
     checkNearby(); // Initial check
 
     return () => clearInterval(intervalId);
