@@ -7,6 +7,7 @@ import { Header } from '@/components/header';
 import { usePathname, useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Footer } from '@/components/Footer';
+import { AppAssistant } from '@/components/AppAssistant';
 
 export function AppContent({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -46,6 +47,7 @@ export function AppContent({ children }: { children: React.ReactNode }) {
         </main>
         <Footer />
       </div>
+      <AppAssistant />
     </div>
   );
 }
